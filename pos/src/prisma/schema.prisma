@@ -1,0 +1,162 @@
+generator client {
+  provider = "prisma-client-js"
+  // output   = "./generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Staff {
+  id        String      @id @default(cuid())
+  name      String
+  branch    String
+  role      String
+  email     String      @unique
+  mobile    String      @unique
+  pin       String
+  createdAt DateTime    @default(now())
+  counterNo Int?
+  order     OrderMeta[]
+}
+
+model ProductMeta {
+  id               String           @id @default(cuid())
+  searchQuery      String?
+  metric           String           @default("None")
+  name             String
+  categories       String[]
+  brand            String?
+  description      String?
+  shortDescription String?
+  images           String[]
+  tags             String[] //can be empty
+  variants         ProductVarient[]
+}
+
+model ProductVarient {
+  id          String      @id @default(cuid())
+  metaId      String
+  barcode     String?
+  variation   Json?
+  prices      Json
+  createdAt   DateTime    @default(now())
+  items       OrderItem[]
+  productMeta ProductMeta @relation(fields: [metaId], references: [id], onDelete: Cascade)
+}
+
+model Expense {
+  id            String     @id @default(cuid())
+  category      String
+  amount        String
+  paymentMethod String
+  remarks       String
+  createdAt     DateTime   @default(now())
+  orderMeta     OrderMeta? @relation(fields: [orderMetaId], references: [id])
+  orderMetaId   String?
+}
+
+model Income {
+  id            String     @id @default(cuid())
+  orderId       String?
+  category      String
+  amount        String
+  paymentMethod String
+  createdAt     DateTime   @default(now())
+  order         OrderMeta? @relation(fields: [orderId], references: [id], onDelete: Cascade)
+}
+
+model CustomerMeta {
+  id           String               @id @default(cuid())
+  mobile       String               @unique
+  name         String
+  createdAt    DateTime             @default(now())
+  residentials CustomerResidential?
+  order        OrderMeta[]
+}
+
+model CustomerResidential {
+  id             String       @id @default(cuid())
+  customerId     String       @unique
+  email          String
+  billingAddress String
+  city           String
+  postalCode     String
+  customer       CustomerMeta @relation(fields: [customerId], references: [id], onDelete: Cascade)
+}
+
+model OrderMeta {
+  id               String       @id @default(cuid())
+  invoiceId        Int          @unique @default(autoincrement())
+  customerId       String
+  status           String
+  branch           String
+  paymentMethod    String
+  saleValue        Decimal      @db.Decimal(10, 2)
+  deliveryfee      Decimal?     @db.Decimal(10, 2)
+  createdAt        DateTime     @default(now())
+  shippingAddress  String?
+  additionalMobile String?
+  customerIp       String?
+  operator         String       @default("ecom")
+  items            OrderItem[]
+  customer         CustomerMeta @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  Staff            Staff        @relation(fields: [operator], references: [id])
+  expenses         Expense[]
+  incomes          Income[]
+}
+
+model OrderItem {
+  id               String         @id @default(cuid())
+  orderId          String
+  unitPrice        Decimal        @db.Decimal(10, 2)
+  quantity         Decimal        @db.Decimal(10, 2)
+  productVarientId String
+  order            OrderMeta      @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  varient          ProductVarient @relation(fields: [productVarientId], references: [id], onDelete: Cascade)
+}
+
+model BranchMeta {
+  id        String   @id @default(cuid())
+  hotlines  String[]
+  address   String
+  createdAt DateTime @default(now())
+  branch    String
+}
+
+model BusinessMeta {
+  id                String     @id @default(cuid())
+  businessName      String
+  businessLogo      String
+  plan              String     @default("Free")
+  planCycle         String     @default("Monthly")
+  ownerName         String
+  ownerMobileNos    String[]
+  createdAt         DateTime   @default(now())
+  categories        String[]   @default([])
+  expenseCategories String[]   @default([])
+  incomeCategories  String[]   @default([])
+  sms               Boolean    @default(false)
+  payments          Payments[]
+}
+
+model Plan {
+  id                       String  @id @default(cuid())
+  name                     String
+  monthlyPrice             Decimal @db.Decimal(10, 2)
+  yearlyDiscountPercentage Decimal @db.Decimal(20, 16)
+}
+
+model Payments {
+  id             String       @id @default(cuid())
+  note           String?
+  businessMetaId String
+  paymentMethod  String
+  paymentProof   String?
+  amount         Decimal      @db.Decimal(10, 2)
+  status         String       @default("Pending")
+  createdAt      DateTime     @default(now())
+  expiredAt      DateTime
+  business       BusinessMeta @relation(fields: [businessMetaId], references: [id])
+}

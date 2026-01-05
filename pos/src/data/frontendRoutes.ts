@@ -1,0 +1,15 @@
+export const posFrontend = {
+  landing: "/",
+  core: "/core",
+  pos: "/core/pos",
+  orders: "/core/orders-latest",
+  ordersHistory: "/core/orders-history",
+  products: "/core/products",
+  customers: "/core/customers",
+  expenses: "/core/expenses",
+  dashboard: "/core/dashboard",
+  optionsBarcodePrint: "/core/options-barcode-print",
+  optionsConfigurations: "/core/options-configurations",
+  pricingOverview: "/core/pricing-overview",
+  pricingHistory: "/core/pricing-history",
+};

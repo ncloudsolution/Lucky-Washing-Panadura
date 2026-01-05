@@ -1,0 +1,16 @@
+# customer creation -- create:customer
+
+| Auth User Role | Expected | Actual --| Status
+
+| System -- with all combination ---- | 🚨 403 --| 🚨 403 --| ✅
+| Director -------------------------- | 🚨 403 --| 🚨 403 --| ✅
+| Manager --------------------------- | 🚨 403 --| 🚨 403 --| ✅
+| Cashier --------------------------- | 201 -----| 201 -----| ✅
+| Uniter ---------------------------- | 201 -----| 201 -----| ✅
+
+# payloads
+
+base:{
+"name": "xxx",
+"mobile": "xxx",
+}
