@@ -16,8 +16,8 @@ import { Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useReactToPrint } from "react-to-print";
 import { BasicDataFetch, formatDate } from "@/utils/common";
-import Invoice from "../cards/Invoice";
 import OrderSheetSkeleton from "../skeleton/OrderSheetSkeleton";
+import NewInvoice from "../cards/NewInvoice";
 
 export function OrderSheet({ id }: { id: string }) {
   const [open, setOpen] = useState(false);
@@ -95,7 +95,7 @@ export function OrderSheet({ id }: { id: string }) {
             </SheetTitle>
 
             <div ref={contentRef} className="flex flex-col gap-4">
-              <Invoice data={invoiceData} mini />
+              <NewInvoice data={invoiceData} mini />
             </div>
           </div>
         ) : (

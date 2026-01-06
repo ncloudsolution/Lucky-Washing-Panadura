@@ -53,7 +53,7 @@ const HeaderLabel = () => {
       <div className="flex-1 text-center">Branch</div>
       <div className="flex-1 text-center">Status</div>
       <div className="flex-1 text-center">Sale Value</div>
-      <div className="flex-1 text-center">Payment Method</div>
+      {/* <div className="flex-1 text-center">Payment Method</div> */}
       <div className="flex-1">Order CreatedAt</div>
       <div className="flex justify-end gap-3">
         <div className="w-[30px]" />
@@ -128,7 +128,7 @@ export const OrderUI = ({
                         maximumFractionDigits: 2,
                       }).format(Number(or.saleValue))}
                     </div>
-                    <div className="flex-1 text-center">{or.paymentMethod}</div>
+                    {/* <div className="flex-1 text-center">{or.paymentMethod}</div> */}
                     <div className="flex flex-1 gap-2 text-muted-foreground">
                       <span className="font-medium">{date}</span>
                       <span>{time}</span>
