@@ -18,6 +18,8 @@ export interface IInvoice {
     saleValue: number;
     deliveryfee: number | null;
     paymentMethod: TPaymentMethod;
+    paymentAmount: number;
+    incomeCategory: number;
     status: TOrderStatus;
     business: string;
     branch: string;
@@ -69,10 +71,21 @@ const NewInvoice = ({
     DELIVERY: sinhalaBill
       ? singlishToUnicode("prawaahana gaasthu")
       : "Delivery Charge",
-    PAYMENT_MODE: sinhalaBill
-      ? singlishToUnicode("gewum maaDhYa")
-      : "Payment Mode",
-    STATUS: sinhalaBill ? singlishToUnicode("ANawumea thathwaya") : "Status",
+    INITIAL_PAYMENT_MODE: sinhalaBill
+      ? singlishToUnicode("praThama gewum maaDhYa")
+      : "Initial Payment Mode",
+    PAYMENT_TYPE: sinhalaBill
+      ? singlishToUnicode("gewiim wargaya")
+      : "Payment Type",
+    PAID_AMOUNT: sinhalaBill
+      ? singlishToUnicode("gewuu mudhala")
+      : "Paid Amount",
+    PAYMENT_BALANCE: sinhalaBill
+      ? singlishToUnicode("hinnga mudhala")
+      : "Balance Payment",
+    STATUS: sinhalaBill
+      ? singlishToUnicode("ANawumea thathwaya")
+      : "Order Status",
     DATE_TIME: sinhalaBill
       ? singlishToUnicode("dhinaya haa wealaawa")
       : "Date & Time",
@@ -117,7 +130,7 @@ const NewInvoice = ({
   }, 0);
 
   console.log(data);
-
+  console.log(data.baseData.saleValue + (data.baseData.deliveryfee ?? 0));
   const [date, time] = formatDate(data.baseData.createdAt);
   return (
     <Card
@@ -257,10 +270,36 @@ const NewInvoice = ({
 
         <div className="flex flex-col py-4 border-b-1 border-dashed border-primary text-[12px]">
           <div className="flex justify-between leading-[17px]">
-            {headings.PAYMENT_MODE}
+            {headings.INITIAL_PAYMENT_MODE}
             <span>{paymentModValue(data.baseData.paymentMethod)}</span>
           </div>
           <div className="flex justify-between leading-[17px]">
+            {headings.PAYMENT_TYPE}
+            <span>{data.baseData.incomeCategory}</span>
+          </div>
+          <div className="text-sm font-saira flex justify-between leading-[17px] font-semibold">
+            {headings.PAID_AMOUNT}
+            <span>
+              {new Intl.NumberFormat("en-US", {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              }).format(data.baseData.paymentAmount)}
+            </span>
+          </div>
+          <div className="text-sm font-saira flex justify-between leading-[17px] font-semibold">
+            {headings.PAYMENT_BALANCE}
+            <span>
+              {new Intl.NumberFormat("en-US", {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              }).format(
+                Number(data.baseData.saleValue) +
+                  Number(data.baseData.deliveryfee ?? 0) -
+                  Number(data.baseData.paymentAmount)
+              )}
+            </span>
+          </div>
+          <div className="flex justify-between leading-[17px] mt-4">
             {headings.STATUS}{" "}
             <span>{statusModValue(data.baseData.status)}</span>
           </div>

@@ -205,6 +205,16 @@ export function CategoryWrapper(
   return FinalCategoryItems.filter((i) => i.id !== "0" && i.id !== "temporary");
 }
 
+export function IncomeCategoryWrapper(FinalCategoryItems: string[]) {
+  return FinalCategoryItems.filter(
+    (i) =>
+      i !== "Full Payment" &&
+      i !== "Advance Payment" &&
+      i !== "Partial Payment" &&
+      i !== "Balance Payment"
+  );
+}
+
 export function nextMonth(date: Date) {
   const d = new Date(date);
   const day = d.getDate();

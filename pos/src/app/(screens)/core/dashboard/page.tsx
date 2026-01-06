@@ -88,7 +88,6 @@ const Dashboard = () => {
     const order = finalOrders.find((i) => i.branch === branch);
     console.log(branch);
     if (!order) return 0; // fallback if branch not found
-
     return type === "count" ? order.totalCount : order.totalSaleValue;
   }
 
@@ -294,7 +293,7 @@ const Dashboard = () => {
           extraDataArray={finalOrders}
         />
       </div>
-      <Card className="flex items-center font-semibold  text-muted-foreground">
+      {/* <Card className="flex items-center font-semibold  text-muted-foreground">
         <div className="flex flex-col flex-1 items-center">
           <div className="flex gap-2 items-center">
             Account Balance
@@ -388,7 +387,7 @@ const Dashboard = () => {
             </span>
           </div>
         </div>
-      </Card>
+      </Card> */}
     </div>
   );
 };

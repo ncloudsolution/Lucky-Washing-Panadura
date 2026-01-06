@@ -207,44 +207,44 @@ export const GET = auth(async function GET(req: any) {
 
     // console.log(itemsFinalArray, "items");
 
-    const stockMetas = await prisma.productStock.findMany({
-      where: {
-        ...(authRole === "manager" || authRole === "uniter"
-          ? { branch: authBranch }
-          : {}),
+    // const stockMetas = await prisma.productStock.findMany({
+    //   where: {
+    //     ...(authRole === "manager" || authRole === "uniter"
+    //       ? { branch: authBranch }
+    //       : {}),
 
-        createdAt: {
-          gte: getDateRange(timeFrame),
-        },
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-    });
+    //     createdAt: {
+    //       gte: getDateRange(timeFrame),
+    //     },
+    //   },
+    //   orderBy: {
+    //     createdAt: "desc",
+    //   },
+    // });
 
-    const totals = stockMetas.reduce(
-      (acc, item) => {
-        const quantity = Number(item.quantity);
-        const unitPrice = Number(item.unitPrice);
-        const discount = Number(item.discount ?? 0);
+    // const totals = stockMetas.reduce(
+    //   (acc, item) => {
+    //     const quantity = Number(item.quantity);
+    //     const unitPrice = Number(item.unitPrice);
+    //     const discount = Number(item.discount ?? 0);
 
-        const value = quantity * unitPrice;
+    //     const value = quantity * unitPrice;
 
-        if (item.in) {
-          acc.totalIn += value - discount;
-        } else {
-          acc.totalOut += value;
-        }
+    //     if (item.in) {
+    //       acc.totalIn += value - discount;
+    //     } else {
+    //       acc.totalOut += value;
+    //     }
 
-        return acc;
-      },
-      { totalIn: 0, totalOut: 0 }
-    );
+    //     return acc;
+    //   },
+    //   { totalIn: 0, totalOut: 0 }
+    // );
 
     const finalData = {
       orders: initialArray,
       products: top5PerBranch,
-      stocks: { stockInValue: totals.totalIn, stockOutValue: totals.totalOut },
+      // stocks: { stockInValue: totals.totalIn, stockOutValue: totals.totalOut },
     };
 
     return NextResponse.json(

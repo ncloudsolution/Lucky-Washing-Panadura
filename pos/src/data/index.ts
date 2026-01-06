@@ -303,7 +303,6 @@ export interface IOrderMeta {
   customerId: string;
   status: string;
   branch: string;
-  paymentMethod: string;
   saleValue: Prisma.Decimal; // Decimal
   deliveryfee?: Prisma.Decimal | null; // Decimal
   createdAt: string | Date;

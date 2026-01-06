@@ -13,7 +13,6 @@ import {
 } from "lucide-react";
 import SuperCenterWrapper from "@/components/custom/wrapper/SuperCenterWrapper";
 import { Card } from "@/components/ui/card";
-import Invoice from "@/components/custom/cards/Invoice";
 import StaticMatrix from "@/components/custom/other/StaticMatrix";
 import { useReactToPrint } from "react-to-print";
 import { Button } from "@/components/ui/button";

@@ -72,8 +72,11 @@ export const POST = auth(async function POST(req: any) {
       );
     }
 
+    const { paymentPortion, paymentPortionAmount, paymentMethod, ...rest } =
+      data.orderMeta;
+
     const orderMetaData = {
-      ...data.orderMeta,
+      ...rest,
       customerId: customer.id,
     };
 
@@ -82,6 +85,15 @@ export const POST = auth(async function POST(req: any) {
       async (tx) => {
         const createdOrder = await tx.orderMeta.create({
           data: orderMetaData,
+        });
+
+        await tx.income.create({
+          data: {
+            orderId: createdOrder.id,
+            amount: paymentPortionAmount,
+            paymentMethod: paymentMethod,
+            category: paymentPortion,
+          },
         });
 
         await tx.orderItem.createMany({
@@ -105,6 +117,11 @@ export const POST = auth(async function POST(req: any) {
 
     const bizDetails = await prisma.businessMeta.findFirst({
       select: { businessName: true, sms: true },
+    });
+
+    const paymentDetails = await prisma.income.findMany({
+      where: { orderId: newOrder.id },
+      orderBy: { createdAt: "asc" },
     });
 
     /* ---------------- SMS ---------------- */
@@ -186,8 +203,16 @@ export const POST = auth(async function POST(req: any) {
           createdAt: newOrder.createdAt,
           saleValue: newOrder.saleValue,
           deliveryfee: newOrder.deliveryfee,
-          paymentMethod: newOrder.paymentMethod,
           status: newOrder.status,
+
+          paymentAmount: paymentDetails?.reduce(
+            (sum, item) => sum.plus(item.amount),
+            new Prisma.Decimal(0)
+          ),
+          //catergory and method always in ebill and printed show the first time payment mode and catgory but the amount get the total of all related orer id
+          incomeCategory: paymentDetails[0]?.category,
+          paymentMethod: paymentDetails[0]?.paymentMethod,
+
           business: bizDetails?.businessName,
           branch: orderOperator?.branch,
           address: branchMeta?.address,
@@ -318,10 +343,11 @@ export const PUT = auth(async function PUT(req: any) {
                 customerId: customerMeta.id,
               }),
 
-            ...(currentOrder?.paymentMethod !==
-              data.orderMeta.paymentMethod && {
-              paymentMethod: data.orderMeta.paymentMethod,
-            }),
+            //update this from other table
+            // ...(currentOrder?.paymentMethod !==
+            //   data.orderMeta.paymentMethod && {
+            //   paymentMethod: data.orderMeta.paymentMethod,
+            // }),
 
             ...(currentOrder?.saleValue !== data.orderMeta.saleValue && {
               saleValue: data.orderMeta.saleValue,
@@ -470,6 +496,8 @@ export const GET = auth(async function GET(req: any) {
           where: { branch: orderOperator?.branch },
         });
 
+        console.log(bizBranchMeta, "m");
+
         const bizDetails = await prisma.businessMeta.findFirst({
           select: { businessName: true },
         });
@@ -477,6 +505,13 @@ export const GET = auth(async function GET(req: any) {
         const customerDetails = await prisma.customerMeta.findFirst({
           where: { id: orderMeta.customerId },
         });
+
+        const paymentDetails = await prisma.income.findMany({
+          where: { orderId: orderMeta.id },
+          orderBy: { createdAt: "asc" },
+        });
+
+        console.log(paymentDetails, "pay");
 
         const allVarientIds = orderItems.map((or: any) => or.productVarientId);
 
@@ -570,8 +605,15 @@ export const GET = auth(async function GET(req: any) {
             createdAt: orderMeta.createdAt,
             saleValue: orderMeta.saleValue,
             deliveryfee: orderMeta.deliveryfee,
-            paymentMethod: orderMeta.paymentMethod,
             status: orderMeta.status,
+
+            paymentAmount: paymentDetails?.reduce(
+              (sum, item) => sum.plus(item.amount),
+              new Prisma.Decimal(0)
+            ),
+            //catergory and method always in ebill and printed show the first time payment mode and catgory but the amount get the total of all related orer id
+            incomeCategory: paymentDetails[0]?.category,
+            paymentMethod: paymentDetails[0]?.paymentMethod,
 
             business: bizDetails?.businessName,
             branch: orderOperator?.branch,

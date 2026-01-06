@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import {
   CircleDollarSign,
   CircleQuestionMark,
+  Coins,
   CreditCard,
   FileText,
   Hand,
@@ -10,6 +11,7 @@ import {
   MapPin,
   MousePointer2,
   Printer,
+  Receipt,
 } from "lucide-react";
 import { useLiveQuery } from "dexie-react-hooks";
 import {
@@ -48,23 +50,22 @@ import {
 } from "@/data";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { TipWrapper } from "../wrapper/TipWrapper";
-import { IInvoice } from "./Invoice";
+
 import { useReactToPrint } from "react-to-print";
-import NewInvoice from "./NewInvoice";
+import NewInvoice, { IInvoice } from "./NewInvoice";
 
 const CartCard = () => {
   const queryClient = useQueryClient();
   const products = useLiveQuery(() => cachedb.cartItem.toArray(), []);
   const structuredProducts = transformCartData(products ?? []);
   const [activeOption, setActiveOption] = useState("Cash");
+  const [paymentPortion, setPaymentPortion] = useState("Full Payment");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [invoiceData, setInvoiceData] = useState<IInvoice>();
 
   const orderType = useLiveQuery(async () => {
     return getOrderType();
   }, []);
-
-  console.log(orderType);
 
   // compute total price live
   // const total = (products ?? []).reduce((sum, item) => {
@@ -95,6 +96,7 @@ const CartCard = () => {
     const fetchDeliveryAndOption = async () => {
       const id = await getLastEbillId();
       setActiveOption(orderType?.edCustomerPaymentMethod ?? "Cash");
+      //here should change fgor edits
       setDeliveryfee(orderType?.edDeliveryfee ?? 0);
       setRemoteOrder(Number(orderType?.edDeliveryfee) > 0);
     };
@@ -111,9 +113,11 @@ const CartCard = () => {
 
   const [remoteOrder, setRemoteOrder] = useState(false);
   const [deliveryfee, setDeliveryfee] = useState(0);
+  const [paymentPortionAmount, setPaymentPortionAmount] = useState(0);
   const initialErrorState = {
     customerError: false,
     deliveryfeeError: false,
+    paymentPortionAmountError: false,
   };
   const [error, setError] = useState(initialErrorState);
 
@@ -131,6 +135,11 @@ const CartCard = () => {
     { name: "Credit", icon: <CircleQuestionMark /> },
   ];
 
+  const paymentPortionOptions = [
+    { name: "Full Payment", icon: <Receipt /> },
+    { name: "Advance Payment", icon: <Coins /> },
+  ];
+
   const { data: session, status } = useSession();
   const currentCustomer = useLiveQuery(() => getCurrentCustomer(), []);
   console.log(currentCustomer);
@@ -141,24 +150,43 @@ const CartCard = () => {
 
     const newErrorState = { ...initialErrorState };
 
+    // 1️⃣ Delivery fee validation
     if (deliveryfee === 0 && remoteOrder) {
       newErrorState.deliveryfeeError = true;
     }
 
-    if (!currentCustomer) {
-      newErrorState.customerError = true;
-      toast.error("Customer Required for Order");
+    // 2️⃣ Advance payment validation
+    if (paymentPortion === "Advance Payment" && paymentPortionAmount === 0) {
+      newErrorState.paymentPortionAmountError = true;
     }
 
-    if (newErrorState.deliveryfeeError || newErrorState.customerError) {
+    // 3️⃣ Customer validation
+    if (!currentCustomer?.name || !currentCustomer?.mobile) {
+      newErrorState.customerError = true;
+    }
+
+    // 🚨 If ANY error exists
+    if (
+      newErrorState.deliveryfeeError ||
+      newErrorState.paymentPortionAmountError ||
+      newErrorState.customerError
+    ) {
       setError(newErrorState);
       setIsSubmitting(false);
-      toast.error("Delivery fee should include the order");
+
+      if (newErrorState.customerError) {
+        toast.error("Customer Required for Order");
+      } else if (newErrorState.paymentPortionAmountError) {
+        toast.error("Advance Payment cannot be 0");
+      } else if (newErrorState.deliveryfeeError) {
+        toast.error("Delivery fee should include the order");
+      }
+
       return;
     }
 
+    // ✅ Clear errors if all good
     setError({ ...initialErrorState });
-
     const products = await getExportReadyCacheCart();
 
     if (!products || products.length === 0) {
@@ -174,6 +202,11 @@ const CartCard = () => {
         operator: session?.user.id,
         branch: session?.user.branch,
         paymentMethod: activeOption,
+        paymentPortion: paymentPortion,
+        paymentPortionAmount:
+          paymentPortion === "Advance Payment"
+            ? paymentPortionAmount
+            : total + deliveryfee,
         saleValue: total,
         ...(remoteOrder ? { deliveryfee } : {}),
         //invoiceId - auto increament -- should include
@@ -325,6 +358,42 @@ const CartCard = () => {
           ))}
         </div>
 
+        <div className="flex w-full gap-3 justify-between">
+          {paymentPortionOptions.map((opt, index) => (
+            <Button
+              onClick={() => {
+                if (paymentPortion !== opt.name) setPaymentPortion(opt.name);
+              }}
+              key={index}
+              className={`flex flex-1 rounded-sm text-white border-2 border-transparent ${
+                paymentPortion === opt.name &&
+                "bg-subbase border-white hover:bg-subbase hover:text-white"
+              }`}
+              variant={"ghost"}
+            >
+              {opt.icon} {opt.name}
+            </Button>
+          ))}
+
+          <>
+            {paymentPortion === "Advance Payment" && (
+              <Input
+                className={`${
+                  error.paymentPortionAmountError && !paymentPortionAmount
+                    ? "border-destructive focus:border-destructive bg-white text-black"
+                    : "border-white focus:border-white bg-subbase text-white"
+                } w-[80px] border-2  font-semibold `}
+                value={paymentPortionAmount === 0 ? "" : paymentPortionAmount}
+                inputMode="decimal"
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setPaymentPortionAmount(value === "" ? 0 : parseFloat(value));
+                }}
+              />
+            )}
+          </>
+        </div>
+
         <div className="flex gap-3 rounded-sm w-full">
           <Button
             variant={"ghost"}
@@ -340,9 +409,9 @@ const CartCard = () => {
             <Input
               className={`${
                 error.deliveryfeeError && !deliveryfee
-                  ? "border-destructive focus:border-destructive"
-                  : "border-white focus:border-white bg-subbase"
-              } w-[80px] border-2 text-white font-semibold `}
+                  ? "border-destructive focus:border-destructive bg-white text-black"
+                  : "border-white focus:border-white bg-subbase text-white"
+              } w-[80px] border-2 font-semibold `}
               value={deliveryfee === 0 ? "" : deliveryfee}
               inputMode="decimal"
               onChange={(e) => {

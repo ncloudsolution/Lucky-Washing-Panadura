@@ -10,8 +10,13 @@ import {
   getBusinessMeta,
   removeBusinessCategory,
   saveBusinessCategories,
+  saveIncomeCategories,
 } from "@/data/dbcache";
-import { BasicDataFetch, CategoryWrapper } from "@/utils/common";
+import {
+  BasicDataFetch,
+  CategoryWrapper,
+  IncomeCategoryWrapper,
+} from "@/utils/common";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
 import React, { useMemo } from "react";
@@ -67,7 +72,7 @@ const Category = () => {
         // 2️⃣ Fetch API
         const response = await BasicDataFetch({
           method: "GET",
-          endpoint: "/api/company/categories",
+          endpoint: "/api/company/categories/income",
         });
 
         const apiCategories: string[] = response.data ?? [];
@@ -79,6 +84,34 @@ const Category = () => {
       },
       staleTime: 1000 * 60 * 5,
     });
+
+  const { data: incomeArray = [], isLoading: isIncomeArray } = useQuery({
+    queryKey: ["income-categories"],
+    queryFn: async (): Promise<string[]> => {
+      await ensureClientInit();
+
+      // 1️⃣ Try cache (correct field)
+      const meta = await getBusinessMeta();
+
+      if (meta?.incomeCategories?.length) {
+        return [...meta.incomeCategories];
+      }
+
+      // 2️⃣ Fetch API
+      const response = await BasicDataFetch({
+        method: "GET",
+        endpoint: "/api/company/categories/income",
+      });
+
+      const apiCategories: string[] = response?.data ?? [];
+
+      // 3️⃣ Save to cache
+      await saveIncomeCategories(apiCategories);
+
+      return apiCategories;
+    },
+    staleTime: 1000 * 60 * 5,
+  });
 
   /* ---------------- Category Objects ---------------- */
   const FinalCategoryItems = useMemo(() => {
@@ -179,12 +212,103 @@ const Category = () => {
       </div>
 
       <div className="text-2xl font-semibold mt-4">Income Categories</div>
-      <div className="flex w-full justify-between gap-10 "></div>
+      <div className="flex w-full justify-between gap-10 mt-4">
+        <div className="flex flex-wrap gap-x-5 gap-y-4">
+          {isIncomeArray ? (
+            <>
+              {Array.from({ length: 12 }, (_, index) => (
+                <Skeleton
+                  key={index}
+                  className="h-[40px] w-[100px] rounded-sm"
+                />
+              ))}
+            </>
+          ) : (
+            <>
+              {incomeArray.map((inc, index) => (
+                <div
+                  key={index}
+                  className={
+                    " h-[40px] min-w-[100px] flex justify-between gap-5 items-center px-2 text-xs text-primary hover:bg-superbase/70 hover:text-white bg-secondary rounded-sm shadow"
+                  }
+                >
+                  {inc}
+
+                  <>
+                    {IncomeCategoryWrapper(incomeArray).includes(inc) && (
+                      <ViewAccessChecker
+                        permission="delete:product"
+                        userBranch={branch}
+                        userRole={role}
+                        component={
+                          <DeleteDialog
+                            mini
+                            triggerText="Delete Category"
+                            data={`Affected Category - ${inc}`}
+                            onClick={async () => {
+                              try {
+                                const res = await BasicDataFetch({
+                                  method: "DELETE",
+                                  endpoint: "/api/company/categories",
+                                  data: { category: inc },
+                                });
+
+                                // await ensureClientInit();
+                                // await removeBusinessCategory(cat.name);
+
+                                // ✅ refresh react-query UI
+                                queryClient.invalidateQueries({
+                                  queryKey: ["income-categories"],
+                                });
+
+                                toast.success(res.message);
+                              } catch (err) {
+                                const errorMessage =
+                                  err instanceof Error
+                                    ? err.message
+                                    : "An error occurred";
+                                toast.error(errorMessage);
+                              }
+                            }}
+                          />
+                        }
+                        skeleton={
+                          <Skeleton className="size-[25px] rounded-sm bg-gray-300 border-slate-400" />
+                        }
+                      />
+                    )}
+                  </>
+                </div>
+              ))}
+            </>
+          )}
+        </div>
+
+        <ViewAccessChecker
+          permission="create:categories"
+          userRole={role}
+          component={
+            <AddNewDialog
+              form={<FormCategory />}
+              triggerText="Add New Income Category"
+            />
+          }
+          skeleton={
+            <Skeleton className="size-[40px] rounded-sm bg-gray-300 border-slate-400" />
+          }
+        />
+      </div>
 
       <div className="flex gap-10 mt-6">
         <div className="flex flex-col">
           <div className="text-2xl font-semibold">SMS Alert</div>
-          <span className="text-xs">{sms ? "Enabled" : "Disabled"}</span>
+          <span className="text-xs">
+            {isLoadingSms || isPending
+              ? "Loading..."
+              : sms
+              ? "Enabled"
+              : "Disabled"}
+          </span>
         </div>
 
         <Switch
@@ -198,7 +322,12 @@ const Category = () => {
               toast.error("Failed to update SMS setting");
             }
           }}
-          className="mt-3 data-[state=checked]:bg-superbase data-[state=unchecked]:bg-destructive"
+          className={`${
+            isLoadingSms ||
+            (isPending
+              ? "data-[state=unchecked]:bg-secondary"
+              : "data-[state=unchecked]:bg-destructive")
+          } mt-3 data-[state=checked]:bg-superbase`}
         />
       </div>
     </div>

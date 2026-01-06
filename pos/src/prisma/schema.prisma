@@ -47,13 +47,12 @@ model ProductVarient {
 }
 
 model Expense {
-  id            String     @id @default(cuid())
+  id            String   @id @default(cuid())
   category      String
   amount        String
   paymentMethod String
   remarks       String
-  createdAt     DateTime   @default(now())
-  orderMeta     OrderMeta? @relation(fields: [orderMetaId], references: [id])
+  createdAt     DateTime @default(now())
   orderMetaId   String?
 }
 
@@ -61,7 +60,7 @@ model Income {
   id            String     @id @default(cuid())
   orderId       String?
   category      String
-  amount        String
+  amount        Decimal    @db.Decimal(10, 2)
   paymentMethod String
   createdAt     DateTime   @default(now())
   order         OrderMeta? @relation(fields: [orderId], references: [id], onDelete: Cascade)
@@ -92,7 +91,6 @@ model OrderMeta {
   customerId       String
   status           String
   branch           String
-  paymentMethod    String
   saleValue        Decimal      @db.Decimal(10, 2)
   deliveryfee      Decimal?     @db.Decimal(10, 2)
   createdAt        DateTime     @default(now())
@@ -102,8 +100,7 @@ model OrderMeta {
   operator         String       @default("ecom")
   items            OrderItem[]
   customer         CustomerMeta @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  Staff            Staff        @relation(fields: [operator], references: [id])
-  expenses         Expense[]
+  staff            Staff        @relation(fields: [operator], references: [id])
   incomes          Income[]
 }
 

@@ -15,7 +15,6 @@ import {
   IOrderMeta,
   IPriceVarient,
   IProductMeta,
-  IProductStock,
   IProductVarient,
   IStaff,
 } from "@/data";
@@ -33,7 +32,6 @@ declare module "dexie" {
     staff: Table<IStaff, string>;
     productMeta: Table<IProductMeta, string>;
     productVarient: Table<IProductVarient, string>;
-    productStock: Table<IProductStock, string>;
     customerMeta: Table<ICustomerMeta, string>;
     customerResidential: Table<ICustomerResidential, string>;
     orderMeta: Table<IOrderMeta, string>;
@@ -54,11 +52,10 @@ cachedb
     productMeta:
       "id,searchQuery,metric,name,categories,brand,description,shortDescription,images,tags",
     productVarient: "id,metaId,barcode,variation,prices,createdAt",
-    productStock: "id,varientId,branch,quantity",
     customerMeta: "id,mobile,name,createdAt",
     customerResidential: "id,customerId,email,billingAddress,city,postalCode",
     orderMeta:
-      "id,invoiceId,customerId,status,branch,paymentMethod,saleValue,deliveryfee,createdAt,shippingAddress,additionalMobile,customerIp,operator",
+      "id,invoiceId,customerId,status,branch,saleValue,deliveryfee,createdAt,shippingAddress,additionalMobile,customerIp,operator",
     orderItem: "id,orderId,unitPrice,quantity,productVarientId",
     branchMeta: "id,hotlines,address,createdAt,branch",
     businessMeta:
@@ -144,6 +141,35 @@ export async function saveBusinessCategories(categories: string[]) {
       ownerMobileNos: [],
       sms: false,
       categories: orderedCategories,
+      incomeCategories: [],
+      expenseCategories: [],
+      plan: "",
+      planCycle: "Monthly",
+      createdAt: "",
+    });
+  }
+}
+
+export async function saveIncomeCategories(categories: string[]) {
+  const existing = await getBusinessMeta();
+
+  if (existing) {
+    await cachedb.businessMeta.put({
+      ...existing,
+      incomeCategories: categories,
+    });
+  } else {
+    // fallback (first-time init)
+    await cachedb.businessMeta.put({
+      id: "biz-01",
+      businessName: "",
+      businessLogo: "",
+      ownerName: "",
+      ownerMobileNos: [],
+      sms: false,
+      categories: [],
+      incomeCategories: categories,
+      expenseCategories: [],
       plan: "",
       planCycle: "Monthly",
       createdAt: "",

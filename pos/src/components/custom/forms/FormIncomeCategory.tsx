@@ -18,7 +18,7 @@ import { Plus } from "lucide-react";
 import { CategorySchema } from "@/utils/validations/company";
 import { cachedb } from "@/data/dbcache";
 
-const FormCategory = () => {
+const FormIncomeCategory = () => {
   const closeRef = React.useRef<HTMLButtonElement | null>(null);
   type FormFields = z.infer<typeof CategorySchema>;
 
@@ -47,7 +47,7 @@ const FormCategory = () => {
       const res = await BasicDataFetch({
         // Added await here
         method: "POST",
-        endpoint: "/api/company/categories",
+        endpoint: "/api/company/categories/income",
         data: data,
       });
 
@@ -60,8 +60,12 @@ const FormCategory = () => {
 
       if (meta) {
         // Remove "All" and "Temporary" from existing cache
-        const existingCategories = meta.categories.filter(
-          (c) => c !== "All" && c !== "Temporary"
+        const existingCategories = meta.incomeCategories.filter(
+          (c) =>
+            c !== "Full Payment" &&
+            c !== "Advance Payment" &&
+            c !== "Partial Payment" &&
+            c !== "Balance Payment"
         );
 
         // Get new categories from form, reverse so last entered comes first
@@ -77,15 +81,21 @@ const FormCategory = () => {
         ];
 
         // Final order: All -> merged -> Temporary
-        const updatedCategories = ["All", ...mergedCategories, "Temporary"];
+        const updatedCategories = [
+          ...mergedCategories,
+          "Full Payment",
+          "Advance Payment",
+          "Partial Payment",
+          "Balance Payment",
+        ];
 
         await cachedb.businessMeta.put({
           ...meta,
-          categories: updatedCategories,
+          incomeCategories: updatedCategories,
         });
       }
 
-      await queryClient.invalidateQueries({ queryKey: ["categories"] });
+      await queryClient.invalidateQueries({ queryKey: ["income-categories"] });
 
       // res already contains parsed JSON from BasicDataFetch
       toast.success(`${res.message} in ${(responseTimeMs / 1000).toFixed(2)}s`);
@@ -113,9 +123,9 @@ const FormCategory = () => {
   return (
     <FormWrapper
       variant="dialog"
-      cardTitle="Categories"
+      cardTitle="Income Categories"
       className={`gap-1 relative`}
-      cardDescription="Add New Category"
+      cardDescription="Add New Income Category"
       width="xxs:w-[350px] w-full"
     >
       <Form {...formMethods}>
@@ -163,4 +173,4 @@ const FormCategory = () => {
   );
 };
 
-export default FormCategory;
+export default FormIncomeCategory;
