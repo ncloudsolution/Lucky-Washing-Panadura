@@ -19,7 +19,6 @@ import FormTemporary from "../forms/FormTemporary";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSession } from "next-auth/react";
 
-
 const BarcodeSearchBar = ({
   onSearch,
   searchOnly = false,
@@ -222,7 +221,8 @@ const BarcodeSearchBar = ({
           />
         }
         skeleton={
-          <Skeleton className="size-[40px] rounded-sm bg-gray-300 border-slate-400" />
+          <></>
+          // <Skeleton className="size-[40px] rounded-sm bg-gray-300 border-slate-400" />
         }
       />
     </div>

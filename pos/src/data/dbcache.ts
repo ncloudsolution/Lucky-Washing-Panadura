@@ -1,6 +1,7 @@
 import { IProductCore } from "@/components/custom/forms/FormCoreProduct";
 import { ISelectedVariation } from "@/components/custom/forms/FormProductOrder";
 import {
+  CategoryType,
   globalDefaultCustomer,
   IBranchMeta,
   IBusinessMeta,
@@ -177,17 +178,44 @@ export async function saveIncomeCategories(categories: string[]) {
   }
 }
 
-export async function removeBusinessCategory(category: string) {
+export async function removeCategory(category: string, kind: CategoryType) {
   const meta = await getBusinessMeta();
   if (!meta) return;
 
-  const updatedCategories = meta.categories.filter(
-    (c) => c.toLowerCase() !== category.toLowerCase()
-  );
+  switch (kind) {
+    case "income": {
+      const updated = meta.incomeCategories.filter(
+        (c) => c.toLowerCase() !== category.toLowerCase()
+      );
 
-  await cachedb.businessMeta.update(meta.id!, {
-    categories: updatedCategories,
-  });
+      await cachedb.businessMeta.update(meta.id!, {
+        incomeCategories: updated,
+      });
+      break;
+    }
+
+    case "expense": {
+      const updated = meta.expenseCategories.filter(
+        (c) => c.toLowerCase() !== category.toLowerCase()
+      );
+
+      await cachedb.businessMeta.update(meta.id!, {
+        expenseCategories: updated,
+      });
+      break;
+    }
+
+    case "product": {
+      const updated = meta.categories.filter(
+        (c) => c.toLowerCase() !== category.toLowerCase()
+      );
+
+      await cachedb.businessMeta.update(meta.id!, {
+        categories: updated,
+      });
+      break;
+    }
+  }
 }
 
 export async function getCachedCategories(): Promise<string[]> {

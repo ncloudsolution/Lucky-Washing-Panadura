@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import FormWrapper from "@/components/custom/wrapper/FormWrapper";
 import { LoaderBtn } from "@/components/custom/buttons/LoaderBtn";
 
-import { BasicDataFetch } from "@/utils/common";
+import { BasicDataFetch, capitalizeFirstLetter } from "@/utils/common";
 import { toast } from "sonner";
 import { DialogClose } from "@radix-ui/react-dialog";
 
@@ -17,8 +17,9 @@ import MultiInput from "../inputs/MultiInput";
 import { Plus } from "lucide-react";
 import { CategorySchema } from "@/utils/validations/company";
 import { cachedb } from "@/data/dbcache";
+import { CategoryType } from "@/data";
 
-const FormCategory = () => {
+const FormCategory = ({ type }: { type: CategoryType }) => {
   const closeRef = React.useRef<HTMLButtonElement | null>(null);
   type FormFields = z.infer<typeof CategorySchema>;
 
@@ -47,7 +48,7 @@ const FormCategory = () => {
       const res = await BasicDataFetch({
         // Added await here
         method: "POST",
-        endpoint: "/api/company/categories",
+        endpoint: `/api/company/categories/${type}`,
         data: data,
       });
 
@@ -58,34 +59,85 @@ const FormCategory = () => {
       // 1️⃣ Get existing meta
       const meta = await cachedb.businessMeta.toCollection().first();
 
-      if (meta) {
-        // Remove "All" and "Temporary" from existing cache
-        const existingCategories = meta.categories.filter(
-          (c) => c !== "All" && c !== "Temporary"
-        );
+      switch (type) {
+        case "product": {
+          if (meta) {
+            // Remove "All" and "Temporary" from existing cache
+            const existingCategories = meta.categories.filter(
+              (c) => c !== "All" && c !== "Temporary"
+            );
 
-        // Get new categories from form, reverse so last entered comes first
-        const newCategories = data.categories
-          .map((c) => c.value)
-          .filter(Boolean) // ignore empty
-          .reverse();
+            // Get new categories from form, reverse so last entered comes first
+            const newCategories = data.categories
+              .map((c) => c.value)
+              .filter(Boolean) // ignore empty
+              .reverse();
 
-        // Merge new categories at the front of existing ones, remove duplicates
-        const mergedCategories = [
-          ...newCategories,
-          ...existingCategories.filter((c) => !newCategories.includes(c)),
-        ];
+            // Merge new categories at the front of existing ones, remove duplicates
+            const mergedCategories = [
+              ...newCategories,
+              ...existingCategories.filter((c) => !newCategories.includes(c)),
+            ];
 
-        // Final order: All -> merged -> Temporary
-        const updatedCategories = ["All", ...mergedCategories, "Temporary"];
+            // Final order: All -> merged -> Temporary
+            const updatedCategories = ["All", ...mergedCategories, "Temporary"];
 
-        await cachedb.businessMeta.put({
-          ...meta,
-          categories: updatedCategories,
-        });
+            await cachedb.businessMeta.put({
+              ...meta,
+              categories: updatedCategories,
+            });
+          }
+
+          return await queryClient.invalidateQueries({
+            queryKey: ["categories"],
+          });
+        }
+        case "income": {
+          if (meta) {
+            // Remove "All" and "Temporary" from existing cache
+            const existingCategories = meta.incomeCategories.filter(
+              (c) =>
+                c !== "Full Payment" &&
+                c !== "Advance Payment" &&
+                c !== "Partial Payment" &&
+                c !== "Balance Payment"
+            );
+
+            // Get new categories from form, reverse so last entered comes first
+            const newCategories = data.categories
+              .map((c) => c.value)
+              .filter(Boolean) // ignore empty
+              .reverse();
+
+            // Merge new categories at the front of existing ones, remove duplicates
+            const mergedCategories = [
+              ...newCategories,
+              ...existingCategories.filter((c) => !newCategories.includes(c)),
+            ];
+
+            // Final order: All -> merged -> Temporary
+            const updatedCategories = [
+              ...mergedCategories,
+              "Full Payment",
+              "Advance Payment",
+              "Partial Payment",
+              "Balance Payment",
+            ];
+
+            await cachedb.businessMeta.put({
+              ...meta,
+              incomeCategories: updatedCategories,
+            });
+          }
+
+          return await queryClient.invalidateQueries({
+            queryKey: ["income-categories"],
+          });
+        }
+        case "expense": {
+          //to be contiune
+        }
       }
-
-      await queryClient.invalidateQueries({ queryKey: ["categories"] });
 
       // res already contains parsed JSON from BasicDataFetch
       toast.success(`${res.message} in ${(responseTimeMs / 1000).toFixed(2)}s`);
@@ -113,9 +165,9 @@ const FormCategory = () => {
   return (
     <FormWrapper
       variant="dialog"
-      cardTitle="Categories"
+      cardTitle={`${capitalizeFirstLetter(type)} Categories`}
       className={`gap-1 relative`}
-      cardDescription="Add New Category"
+      cardDescription={`Add New ${capitalizeFirstLetter(type)} Category`}
       width="xxs:w-[350px] w-full"
     >
       <Form {...formMethods}>

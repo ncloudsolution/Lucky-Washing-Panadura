@@ -8,7 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import {
   ensureClientInit,
   getBusinessMeta,
-  removeBusinessCategory,
+  removeCategory,
   saveBusinessCategories,
   saveIncomeCategories,
 } from "@/data/dbcache";
@@ -72,7 +72,7 @@ const Category = () => {
         // 2️⃣ Fetch API
         const response = await BasicDataFetch({
           method: "GET",
-          endpoint: "/api/company/categories/income",
+          endpoint: "/api/company/categories/product",
         });
 
         const apiCategories: string[] = response.data ?? [];
@@ -161,12 +161,12 @@ const Category = () => {
                               try {
                                 const res = await BasicDataFetch({
                                   method: "DELETE",
-                                  endpoint: "/api/company/categories",
+                                  endpoint: "/api/company/categories/product",
                                   data: { category: cat.name },
                                 });
 
                                 await ensureClientInit();
-                                await removeBusinessCategory(cat.name);
+                                await removeCategory(cat.name, "product");
 
                                 // ✅ refresh react-query UI
                                 queryClient.invalidateQueries({
@@ -201,7 +201,7 @@ const Category = () => {
           userRole={role}
           component={
             <AddNewDialog
-              form={<FormCategory />}
+              form={<FormCategory type="product" />}
               triggerText="Add New Category"
             />
           }
@@ -243,18 +243,18 @@ const Category = () => {
                         component={
                           <DeleteDialog
                             mini
-                            triggerText="Delete Category"
-                            data={`Affected Category - ${inc}`}
+                            triggerText="Delete Income Category"
+                            data={`Affected Income Category - ${inc}`}
                             onClick={async () => {
                               try {
                                 const res = await BasicDataFetch({
                                   method: "DELETE",
-                                  endpoint: "/api/company/categories",
+                                  endpoint: "/api/company/categories/income",
                                   data: { category: inc },
                                 });
 
-                                // await ensureClientInit();
-                                // await removeBusinessCategory(cat.name);
+                                await ensureClientInit();
+                                await removeCategory(inc, "income");
 
                                 // ✅ refresh react-query UI
                                 queryClient.invalidateQueries({
@@ -289,7 +289,7 @@ const Category = () => {
           userRole={role}
           component={
             <AddNewDialog
-              form={<FormCategory />}
+              form={<FormCategory type="income" />}
               triggerText="Add New Income Category"
             />
           }

@@ -397,7 +397,7 @@ const CartCard = () => {
         <div className="flex gap-3 rounded-sm w-full">
           <Button
             variant={"ghost"}
-            className={`shadow-lg flex justify-center items-center rounded-sm bg-transparent border-transparent hover:bg-subbase hover:text-white px-4 py-1 gap-2 text-white border-2 ${
+            className={`shadow-lg flex justify-center items-center rounded-sm bg-transparent border-transparent hover:bg-white hover:text-black px-4 py-1 gap-2 text-white border-2 ${
               (remoteOrder || deliveryfee) && "bg-subbase  border-white"
             }`}
             onClick={() => setRemoteOrder(!remoteOrder)}

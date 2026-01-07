@@ -219,6 +219,38 @@ export const productData = {
   logo: "https://drive.google.com/uc?export=view&id=1BmlAdw1QLbvO6sHd4ExX8l0XFApWaVtr",
 };
 
+// category.config.ts
+export const CATEGORY_CONFIG = {
+  income: {
+    field: "incomeCategories",
+    inUseCheck: async (category: string, prisma: any) =>
+      prisma.income.findFirst({
+        where: { category },
+        select: { id: true },
+      }),
+  },
+  expense: {
+    field: "expenseCategories",
+    inUseCheck: async (category: string, prisma: any) =>
+      prisma.income.findFirst({
+        where: { category },
+        select: { id: true },
+      }),
+  },
+  product: {
+    field: "categories",
+    inUseCheck: async (category: string, prisma: any) =>
+      prisma.productMeta.findFirst({
+        where: {
+          categories: { has: category },
+        },
+        select: { id: true },
+      }),
+  },
+} as const;
+
+export type CategoryType = keyof typeof CATEGORY_CONFIG;
+
 export interface IStaff {
   id?: string;
   name: string;

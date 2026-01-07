@@ -272,3 +272,8 @@ export function getMissedCyclesFromExpiry(
     dueDate, // next payable cycle date
   };
 }
+
+export function capitalizeFirstLetter(word: string) {
+  if (!word) return ""; // handle empty strings
+  return word.charAt(0).toUpperCase() + word.slice(1);
+}
