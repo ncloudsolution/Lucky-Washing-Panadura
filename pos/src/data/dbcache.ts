@@ -116,65 +116,56 @@ export async function getBusinessMeta() {
   return await cachedb.businessMeta.toCollection().first();
 }
 
-export async function saveBusinessCategories(categories: string[]) {
+export async function saveCategory(categories: string[], kind: CategoryType) {
   const existing = await getBusinessMeta();
 
-  const orderedCategories = [
-    "All",
-    ...categories.filter(
-      (c) => c.toLowerCase() !== "all" && c.toLowerCase() !== "temporary"
-    ),
-    "Temporary",
-  ];
+  const baseMeta = existing ?? {
+    id: "biz-01",
+    businessName: "",
+    businessLogo: "",
+    ownerName: "",
+    ownerMobileNos: [],
+    sms: false,
+    categories: [],
+    incomeCategories: [],
+    expenseCategories: [],
+    plan: "",
+    planCycle: "Monthly",
+    createdAt: "",
+  };
 
-  if (existing) {
-    await cachedb.businessMeta.put({
-      ...existing,
-      categories: orderedCategories,
-    });
-  } else {
-    // fallback (first-time init)
-    await cachedb.businessMeta.put({
-      id: "biz-01",
-      businessName: "",
-      businessLogo: "",
-      ownerName: "",
-      ownerMobileNos: [],
-      sms: false,
-      categories: orderedCategories,
-      incomeCategories: [],
-      expenseCategories: [],
-      plan: "",
-      planCycle: "Monthly",
-      createdAt: "",
-    });
-  }
-}
+  switch (kind) {
+    case "product": {
+      const orderedCategories = [
+        "All",
+        ...categories.filter(
+          (c) => c.toLowerCase() !== "all" && c.toLowerCase() !== "temporary"
+        ),
+        "Temporary",
+      ];
 
-export async function saveIncomeCategories(categories: string[]) {
-  const existing = await getBusinessMeta();
+      await cachedb.businessMeta.put({
+        ...baseMeta,
+        categories: orderedCategories,
+      });
+      break;
+    }
 
-  if (existing) {
-    await cachedb.businessMeta.put({
-      ...existing,
-      incomeCategories: categories,
-    });
-  } else {
-    // fallback (first-time init)
-    await cachedb.businessMeta.put({
-      id: "biz-01",
-      businessName: "",
-      businessLogo: "",
-      ownerName: "",
-      ownerMobileNos: [],
-      sms: false,
-      categories: [],
-      incomeCategories: categories,
-      expenseCategories: [],
-      plan: "",
-      planCycle: "Monthly",
-      createdAt: "",
-    });
+    case "income": {
+      await cachedb.businessMeta.put({
+        ...baseMeta,
+        incomeCategories: categories,
+      });
+      break;
+    }
+
+    case "expense": {
+      await cachedb.businessMeta.put({
+        ...baseMeta,
+        expenseCategories: categories,
+      });
+      break;
+    }
   }
 }
 

@@ -11,7 +11,7 @@ import {
   getCacheProductsWithVariants,
   ensureClientInit,
   getBusinessMeta,
-  saveBusinessCategories,
+  saveCategory,
 } from "@/data/dbcache";
 
 import NoRecordsCard from "@/components/custom/cards/NoRecordsCard";
@@ -50,7 +50,7 @@ function PosWindow() {
         const apiCategories: string[] = response.data ?? [];
 
         // 3️⃣ Save ordered categories to cache
-        await saveBusinessCategories(apiCategories);
+        await saveCategory(apiCategories, "product");
 
         return ["All", ...apiCategories, "Temporary"];
       },

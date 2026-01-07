@@ -88,9 +88,12 @@ const FormCategory = ({ type }: { type: CategoryType }) => {
             });
           }
 
-          return await queryClient.invalidateQueries({
+          await queryClient.invalidateQueries({
             queryKey: ["categories"],
           });
+          return toast.success(
+            `${res.message} in ${(responseTimeMs / 1000).toFixed(2)}s`
+          );
         }
         case "income": {
           if (meta) {
@@ -130,17 +133,46 @@ const FormCategory = ({ type }: { type: CategoryType }) => {
             });
           }
 
-          return await queryClient.invalidateQueries({
+          await queryClient.invalidateQueries({
             queryKey: ["income-categories"],
           });
+
+          return toast.success(
+            `${res.message} in ${(responseTimeMs / 1000).toFixed(2)}s`
+          );
         }
         case "expense": {
-          //to be contiune
+          if (meta) {
+            // Remove "All" and "Temporary" from existing cache
+            const existingCategories = meta.expenseCategories;
+
+            // Get new categories from form, reverse so last entered comes first
+            const newCategories = data.categories
+              .map((c) => c.value)
+              .filter(Boolean) // ignore empty
+              .reverse();
+
+            // Merge new categories at the front of existing ones, remove duplicates
+            const mergedCategories = [
+              ...newCategories,
+              ...existingCategories.filter((c) => !newCategories.includes(c)),
+            ];
+
+            await cachedb.businessMeta.put({
+              ...meta,
+              expenseCategories: mergedCategories,
+            });
+          }
+
+          await queryClient.invalidateQueries({
+            queryKey: ["expense-categories"],
+          });
+          // res already contains parsed JSON from BasicDataFetch
+          return toast.success(
+            `${res.message} in ${(responseTimeMs / 1000).toFixed(2)}s`
+          );
         }
       }
-
-      // res already contains parsed JSON from BasicDataFetch
-      toast.success(`${res.message} in ${(responseTimeMs / 1000).toFixed(2)}s`);
 
       //update dexie
     } catch (err) {
