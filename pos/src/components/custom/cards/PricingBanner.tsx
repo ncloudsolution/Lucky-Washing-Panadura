@@ -51,7 +51,7 @@ const PricingBanner = () => {
           Payment Reminder !
         </span>
         <span className="lg:text-sm text-xs">
-          Dear valued customer, we noticed an outstanding payment of{" "}
+          Dear valued customer, we noticed an Credit Payment of{" "}
           <b>
             LKR{" "}
             {new Intl.NumberFormat("en-US", {

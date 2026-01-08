@@ -469,10 +469,72 @@ export const GET = auth(async function GET(req: any) {
 
   let mode: string;
   if (searchParams.has("id")) mode = "id";
+  else if (searchParams.has("payment-breakdown")) mode = "payment-breakdown";
   else if (searchParams.has("search")) mode = "search";
   else mode = "list";
 
   switch (mode) {
+    case "payment-breakdown": {
+      const id = searchParams.get("payment-breakdown")?.trim();
+
+      if (!id) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: "Order Id missing",
+            data: null,
+            error: "INVALID OPERATION",
+          },
+          { status: 400 }
+        );
+      }
+      try {
+        const breakdowns = await prisma.income.findMany({
+          where: {
+            orderId: id,
+          },
+          select: {
+            amount: true,
+            paymentMethod: true,
+            category: true,
+            createdAt: true,
+          },
+          orderBy: {
+            createdAt: "asc",
+          },
+        });
+
+        if (!breakdowns) {
+          return NextResponse.json(
+            {
+              success: false,
+              message: "This order does not exist",
+              error: "NOT FOUND",
+            },
+            { status: 404 }
+          );
+        }
+        return NextResponse.json(
+          {
+            success: true,
+            message: "Order Payment Breakdown fetched successfully!",
+            data: breakdowns,
+          },
+          { status: 200 }
+        );
+      } catch (e) {
+        console.error("Error:", e);
+        return NextResponse.json(
+          {
+            data: null,
+            suceess: false,
+            message: "An error occurred while processing your request",
+            error: e instanceof Error ? e.message : String(e),
+          },
+          { status: 500 }
+        );
+      }
+    }
     //############## SEARCH BY ID #################
     case "id": {
       const id = searchParams.get("id")?.trim();

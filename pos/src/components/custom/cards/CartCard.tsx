@@ -215,7 +215,7 @@ const CartCard = () => {
         paymentPortion: paymentPortion,
         paymentPortionAmount:
           paymentPortion === "Advance Payment" ||
-          paymentPortion === "Outstanding Payment"
+          paymentPortion === "Credit Payment"
             ? paymentPortionAmount
             : total + deliveryfee,
         saleValue: total,
@@ -358,7 +358,7 @@ const CartCard = () => {
                 if (activeOption !== opt.name) setActiveOption(opt.name);
                 if (opt.name === "Credit") {
                   setPaymentPortionAmount(0);
-                  setPaymentPortion("Outstanding Payment");
+                  setPaymentPortion("Credit Payment");
                 }
               }}
               key={index}

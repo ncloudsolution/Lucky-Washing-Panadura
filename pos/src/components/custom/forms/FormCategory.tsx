@@ -104,7 +104,7 @@ const FormCategory = ({ type }: { type: CategoryType }) => {
                 c !== "Advance Payment" &&
                 c !== "Partial Payment" &&
                 c !== "Balance Payment" &&
-                c !== "Outstanding Payment"
+                c !== "Credit Payment"
             );
 
             // Get new categories from form, reverse so last entered comes first
@@ -126,7 +126,7 @@ const FormCategory = ({ type }: { type: CategoryType }) => {
               "Advance Payment",
               "Partial Payment",
               "Balance Payment",
-              "Outstanding Payment",
+              "Credit Payment",
             ];
 
             await cachedb.businessMeta.put({

@@ -18,6 +18,7 @@ import { useReactToPrint } from "react-to-print";
 import { BasicDataFetch, formatDate } from "@/utils/common";
 import OrderSheetSkeleton from "../skeleton/OrderSheetSkeleton";
 import NewInvoice from "../cards/NewInvoice";
+import { TPaymentMethod } from "@/data";
 
 export function OrderSheet({ id }: { id: string }) {
   const [open, setOpen] = useState(false);
@@ -41,6 +42,25 @@ export function OrderSheet({ id }: { id: string }) {
     enabled: !!id && open,
   });
 
+  const { data: paymentBreakdown = [], isLoading: isLoadingPaymentBreakdown } =
+    useQuery({
+      queryKey: ["order-payment-breakdown", id],
+      queryFn: () =>
+        BasicDataFetch({
+          method: "GET",
+          endpoint: `/api/orders?payment-breakdown=${id}`,
+        }),
+      select: (response) =>
+        response?.data as {
+          amount: number;
+          paymentMethod: TPaymentMethod;
+          category: string;
+          createdAt: Date | string;
+        }[],
+      staleTime: 1000 * 60 * 5,
+      enabled: !!id && open,
+    });
+
   const [date, time] = formatDate(invoiceData?.baseData.customerCreatedAt);
   return (
     <Sheet open={open} onOpenChange={setOpen}>
@@ -50,7 +70,7 @@ export function OrderSheet({ id }: { id: string }) {
       <SheetContent className="gap-0 overflow-y-auto no-scrollbar">
         <SheetHeader className=" gap-0">
           <SheetTitle className="hidden">Order Summary</SheetTitle>
-          {!isLoading ? (
+          {!isLoading && !isLoadingPaymentBreakdown ? (
             <>
               <SheetTitle className="text-[18px] flex flex-col">
                 Order Summary
@@ -67,7 +87,7 @@ export function OrderSheet({ id }: { id: string }) {
           )}
         </SheetHeader>
 
-        {!isLoading ? (
+        {!isLoading && !isLoadingPaymentBreakdown ? (
           <div className="flex flex-col px-4">
             <SheetTitle className="text-[18px] flex flex-col border-b pb-1">
               Customer Details
@@ -90,7 +110,38 @@ export function OrderSheet({ id }: { id: string }) {
               </div>
             </div>
 
-            <SheetTitle className="text-[20px] flex flex-col py-5">
+            <SheetTitle className="text-[18px] flex flex-col border-b pb-1 mt-4">
+              Payment History
+            </SheetTitle>
+            <div className="flex flex-col w-full text-sm mt-2">
+              {paymentBreakdown.map((pay, index) => {
+                if (!pay?.createdAt) return null;
+
+                const [date, time] = formatDate(
+                  new Date(pay.createdAt).toLocaleString()
+                );
+
+                return (
+                  <div key={index} className="flex w-full justify-between">
+                    <div className="flex gap-5">
+                      <div className="font-semibold w-[60px]">
+                        {pay.paymentMethod}
+                      </div>
+                      <div className="flex gap-3 text-sm">
+                        {date} {time}
+                      </div>
+                    </div>
+
+                    {new Intl.NumberFormat("en-US", {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    }).format(pay.amount)}
+                  </div>
+                );
+              })}
+            </div>
+
+            <SheetTitle className="text-[20px] flex flex-col py-4">
               Invoice
             </SheetTitle>
 
