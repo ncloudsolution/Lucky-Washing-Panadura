@@ -379,13 +379,13 @@ export const PUT = auth(async function PUT(req: any) {
               ...i,
             };
           });
-          await prisma.orderItem.createMany({ data: newData });
+          await tx.orderItem.createMany({ data: newData });
         }
 
         if (commonItems.length > 0) {
           await Promise.all(
             commonItems.map((item) =>
-              prisma.orderItem.updateMany({
+              tx.orderItem.updateMany({
                 where: {
                   orderId: orderId,
                   productVarientId: item.productVarientId,
@@ -396,6 +396,43 @@ export const PUT = auth(async function PUT(req: any) {
               })
             )
           );
+        }
+
+        const { paymentPortion, paymentPortionAmount, paymentMethod } =
+          data.orderMeta;
+
+        const firstIncome = await tx.income.findFirst({
+          where: { orderId },
+          orderBy: { createdAt: "desc" },
+        });
+
+        if (!firstIncome) return;
+
+        // check what actually changed
+        const updateData: {
+          amount?: number;
+          paymentMethod?: string;
+          category?: string;
+        } = {};
+
+        if (firstIncome.amount !== paymentPortionAmount) {
+          updateData.amount = paymentPortionAmount;
+        }
+
+        if (firstIncome.paymentMethod !== paymentMethod) {
+          updateData.paymentMethod = paymentMethod;
+        }
+
+        if (firstIncome.category !== paymentPortion) {
+          updateData.category = paymentPortion;
+        }
+
+        // only update if something changed
+        if (Object.keys(updateData).length > 0) {
+          await tx.income.update({
+            where: { id: firstIncome.id },
+            data: updateData,
+          });
         }
       }
     );

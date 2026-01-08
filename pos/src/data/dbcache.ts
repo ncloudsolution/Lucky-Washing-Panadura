@@ -20,8 +20,6 @@ import {
   IStaff,
 } from "@/data";
 import { focusBarcode, getVariationName } from "@/utils/common";
-import { Prisma } from "@prisma/client";
-import { useQueryClient } from "@tanstack/react-query";
 
 import { Dexie, Table } from "dexie";
 import React from "react";
@@ -62,7 +60,7 @@ cachedb
     businessMeta:
       "id,businessName,businessLogo,ownerName,ownerMobileNos,categories,sms",
     client:
-      "id,lastProductFetch,lastOrderId,editMode,edCustomerMobile,edCustomerPaymentMethod,edDeliveryfee",
+      "id,lastProductFetch,lastOrderId,editMode,edCustomerMobile,edCustomerPaymentMethod,edDeliveryfee,edPaymentPortion",
     cartItem:
       "++id,name,variationName,priceVariation,image,productVarientId,unitPrice,quantity",
     holdedCartItem:
@@ -108,6 +106,8 @@ export async function ensureClientInit() {
         : null,
       edCustomerPaymentMethod: "Cash",
       edDeliveryfee: null, //new Prisma.Decimal(50),
+      edPaymentPortion: "Full Payment",
+      edPaymentPortionAmount: null,
     });
   }
 }
@@ -235,6 +235,23 @@ export async function setClientEditMode(editMode: boolean) {
   return { ...client, editMode }; // return updated client object
 }
 
+export async function clientReset() {
+  const client = await cachedb.client.get(clientPrimaryKey);
+
+  if (!client) return null; // client not found
+
+  // update only editMode
+  const x = await cachedb.client.update(clientPrimaryKey, {
+    editMode: false,
+    edCustomerPaymentMethod: "Cash",
+    edDeliveryfee: null, //new Prisma.Decimal(50),
+    edPaymentPortion: "Full Payment",
+    edPaymentPortionAmount: null,
+  });
+
+  return x; // return updated client object
+}
+
 export async function syncCacheProducts(queryClient: any) {
   await cachedb.productMeta.clear();
   await cachedb.productVarient.clear();
@@ -311,6 +328,8 @@ export async function saveAllProductWithVariants({
       : null,
     edCustomerPaymentMethod: "Cash",
     edDeliveryfee: null,
+    edPaymentPortion: "Full Payment",
+    edPaymentPortionAmount: null,
   });
 }
 
@@ -712,6 +731,8 @@ export async function editInvoice(data: any) {
   );
 
   await cachedb.client.update(clientPrimaryKey, {
+    edPaymentPortionAmount: Number(data.baseData.paymentAmount),
+    edPaymentPortion: data.baseData.incomeCategory,
     edCustomerPaymentMethod: data.baseData.paymentMethod,
     edCustomerMobile: data.baseData.customerMobile,
     edDeliveryfee: Number(data.baseData.deliveryfee),

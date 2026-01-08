@@ -12,7 +12,7 @@ import {
   getBusinessMeta,
   getCacheProductsWithVariants,
   saveAllProductWithVariants,
-  saveBusinessCategories,
+  saveCategory,
 } from "@/data/dbcache";
 import { BasicDataFetch } from "@/utils/common";
 import { useQuery } from "@tanstack/react-query";
@@ -51,7 +51,7 @@ const Products = () => {
         const apiCategories: string[] = response.data ?? [];
 
         // 3️⃣ Save ordered categories to cache
-        await saveBusinessCategories(apiCategories);
+        await saveCategory(apiCategories, "product");
 
         return ["All", ...apiCategories, "Temporary"];
       },

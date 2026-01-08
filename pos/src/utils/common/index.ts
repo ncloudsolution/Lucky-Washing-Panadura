@@ -211,7 +211,8 @@ export function IncomeCategoryWrapper(FinalCategoryItems: string[]) {
       i !== "Full Payment" &&
       i !== "Advance Payment" &&
       i !== "Partial Payment" &&
-      i !== "Balance Payment"
+      i !== "Balance Payment" &&
+      i !== "Outstanding Payment"
   );
 }
 

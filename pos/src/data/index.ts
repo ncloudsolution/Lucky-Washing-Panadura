@@ -4,9 +4,7 @@ import { BankDetailsCard } from "@/components/custom/cards/BankDetailsCard";
 
 //change done by sohan
 export const devMode = false;
-export const BaseUrl = devMode
-  ? "http://localhost:3000"
-  : "https://new-pos-ecom-ivory.vercel.app";
+export const BaseUrl = devMode ? "http://localhost:3000" : "newlink";
 
 export const globalDefaultCustomer = {
   enable: true,
@@ -390,6 +388,8 @@ export interface IClient {
   edCustomerMobile: string | null;
   edCustomerPaymentMethod: TPaymentMethod;
   edDeliveryfee: number | null;
+  edPaymentPortion: string;
+  edPaymentPortionAmount: number | null;
 }
 
 interface ICartVariation {

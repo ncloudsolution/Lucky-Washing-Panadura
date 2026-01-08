@@ -24,7 +24,7 @@ import { DialogClose } from "@radix-ui/react-dialog";
 import {
   ensureClientInit,
   getBusinessMeta,
-  saveBusinessCategories,
+  saveCategory,
   saveOneProductWithVariants,
 } from "@/data/dbcache";
 import { singleImageSubmission, deleteSingleImage } from "@/firebase/helpers";
@@ -74,7 +74,7 @@ const FormCoreProduct = () => {
         const apiCategories: string[] = response.data ?? [];
 
         // 3️⃣ Save ordered categories to cache
-        await saveBusinessCategories(apiCategories);
+        await saveCategory(apiCategories, "product");
 
         return ["All", ...apiCategories, "Temporary"];
       },

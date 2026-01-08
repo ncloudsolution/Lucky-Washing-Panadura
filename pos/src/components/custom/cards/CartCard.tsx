@@ -18,6 +18,7 @@ import {
   cachedb,
   clearCurrentCustomer,
   clientPrimaryKey,
+  clientReset,
   getCurrentCustomer,
   getExportReadyCacheCart,
   getLastEbillId,
@@ -96,6 +97,8 @@ const CartCard = () => {
     const fetchDeliveryAndOption = async () => {
       const id = await getLastEbillId();
       setActiveOption(orderType?.edCustomerPaymentMethod ?? "Cash");
+      setPaymentPortion(orderType?.edPaymentPortion ?? "Full Payment");
+      setPaymentPortionAmount(orderType?.edPaymentPortionAmount ?? 0);
       //here should change fgor edits
       setDeliveryfee(orderType?.edDeliveryfee ?? 0);
       setRemoteOrder(Number(orderType?.edDeliveryfee) > 0);
@@ -160,6 +163,13 @@ const CartCard = () => {
       newErrorState.paymentPortionAmountError = true;
     }
 
+    if (
+      paymentPortion === "Advance Payment" &&
+      paymentPortionAmount === total
+    ) {
+      newErrorState.paymentPortionAmountError = true;
+    }
+
     // 3️⃣ Customer validation
     if (!currentCustomer?.name || !currentCustomer?.mobile) {
       newErrorState.customerError = true;
@@ -177,7 +187,7 @@ const CartCard = () => {
       if (newErrorState.customerError) {
         toast.error("Customer Required for Order");
       } else if (newErrorState.paymentPortionAmountError) {
-        toast.error("Advance Payment cannot be 0");
+        toast.error("Advance payment cannot be 0 or total.");
       } else if (newErrorState.deliveryfeeError) {
         toast.error("Delivery fee should include the order");
       }
@@ -204,14 +214,15 @@ const CartCard = () => {
         paymentMethod: activeOption,
         paymentPortion: paymentPortion,
         paymentPortionAmount:
-          paymentPortion === "Advance Payment"
+          paymentPortion === "Advance Payment" ||
+          paymentPortion === "Outstanding Payment"
             ? paymentPortionAmount
             : total + deliveryfee,
         saleValue: total,
         ...(remoteOrder ? { deliveryfee } : {}),
         //invoiceId - auto increament -- should include
         //customerIp,additionalMobile,ShippingAddress
-        status: remoteOrder ? "Processing" : "Delivered",
+        status: "Processing",
         //createdAt - auto created -- should include
       },
       orderItems: products, //array
@@ -227,17 +238,10 @@ const CartCard = () => {
         data: data,
       });
 
+      console.log(res.data);
+
       const end = performance.now();
       const responseTimeMs = end - start;
-
-      // res already contains parsed JSON from BasicDataFetch
-      toast.success(`${res.message} in ${(responseTimeMs / 1000).toFixed(2)}s`);
-
-      await removeAllFromCacheCart();
-      await setClientEditMode(false);
-      setDeliveryfee(0);
-      setRemoteOrder(false);
-      setActiveOption("Cash");
 
       if (!globalDefaultCustomer.enable) {
         await clearCurrentCustomer();
@@ -245,8 +249,12 @@ const CartCard = () => {
 
       //update lastest orders
       if (orderType?.editMode) {
-        queryClient.invalidateQueries({
+        await queryClient.invalidateQueries({
           queryKey: ["latest-order-metas"],
+        });
+
+        await queryClient.invalidateQueries({
+          queryKey: ["invoice", orderType.lastOrderId],
         });
       } else {
         const ebillData = defaultPrint ? res.data.baseData : res.data;
@@ -260,18 +268,21 @@ const CartCard = () => {
           //...
         }
 
-        queryClient.setQueryData(
-          ["latest-order-metas"],
-          (oldData?: IOrderMeta[]) => {
-            const oldArray = oldData ?? [];
-            console.log(oldArray, "old array");
-            console.log(res.data.newOrder, "new resp");
-            const updated = [res.data.newOrder, ...oldArray];
-            console.log(updated, "updated array");
-            return updated.slice(0, 10); // limit list if needed
-          }
-        );
+        await queryClient.invalidateQueries({
+          queryKey: ["latest-order-metas"],
+        });
       }
+
+      await removeAllFromCacheCart();
+      // await setClientEditMode(false);
+      await clientReset();
+      // setDeliveryfee(0);
+      // setRemoteOrder(false);
+      // setActiveOption("Cash");
+      // setPaymentPortion("Full Payment");
+      // setPaymentPortionAmount(0);
+      // res already contains parsed JSON from BasicDataFetch
+      toast.success(`${res.message} in ${(responseTimeMs / 1000).toFixed(2)}s`);
 
       playMusic("/sounds/paid.mp3");
     } catch (err) {
@@ -345,6 +356,10 @@ const CartCard = () => {
             <Button
               onClick={() => {
                 if (activeOption !== opt.name) setActiveOption(opt.name);
+                if (opt.name === "Credit") {
+                  setPaymentPortionAmount(0);
+                  setPaymentPortion("Outstanding Payment");
+                }
               }}
               key={index}
               className={`flex flex-1 rounded-sm text-white border-2 border-transparent ${
@@ -357,42 +372,45 @@ const CartCard = () => {
             </Button>
           ))}
         </div>
-
-        <div className="flex w-full gap-3 justify-between">
-          {paymentPortionOptions.map((opt, index) => (
-            <Button
-              onClick={() => {
-                if (paymentPortion !== opt.name) setPaymentPortion(opt.name);
-              }}
-              key={index}
-              className={`flex flex-1 rounded-sm text-white border-2 border-transparent ${
-                paymentPortion === opt.name &&
-                "bg-subbase border-white hover:bg-subbase hover:text-white"
-              }`}
-              variant={"ghost"}
-            >
-              {opt.icon} {opt.name}
-            </Button>
-          ))}
-
-          <>
-            {paymentPortion === "Advance Payment" && (
-              <Input
-                className={`${
-                  error.paymentPortionAmountError && !paymentPortionAmount
-                    ? "border-destructive focus:border-destructive bg-white text-black"
-                    : "border-white focus:border-white bg-subbase text-white"
-                } w-[80px] border-2  font-semibold `}
-                value={paymentPortionAmount === 0 ? "" : paymentPortionAmount}
-                inputMode="decimal"
-                onChange={(e) => {
-                  const value = e.target.value;
-                  setPaymentPortionAmount(value === "" ? 0 : parseFloat(value));
+        {activeOption !== "Credit" && (
+          <div className="flex w-full gap-3 justify-between">
+            {paymentPortionOptions.map((opt, index) => (
+              <Button
+                onClick={() => {
+                  if (paymentPortion !== opt.name) setPaymentPortion(opt.name);
                 }}
-              />
-            )}
-          </>
-        </div>
+                key={index}
+                className={`flex flex-1 rounded-sm text-white border-2 border-transparent ${
+                  paymentPortion === opt.name &&
+                  "bg-subbase border-white hover:bg-subbase hover:text-white"
+                }`}
+                variant={"ghost"}
+              >
+                {opt.icon} {opt.name}
+              </Button>
+            ))}
+
+            <>
+              {paymentPortion === "Advance Payment" && (
+                <Input
+                  className={`${
+                    error.paymentPortionAmountError && !paymentPortionAmount
+                      ? "border-destructive focus:border-destructive bg-white text-black"
+                      : "border-white focus:border-white bg-subbase text-white"
+                  } w-[80px] border-2  font-semibold `}
+                  value={paymentPortionAmount === 0 ? "" : paymentPortionAmount}
+                  inputMode="decimal"
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setPaymentPortionAmount(
+                      value === "" ? 0 : parseFloat(value)
+                    );
+                  }}
+                />
+              )}
+            </>
+          </div>
+        )}
 
         <div className="flex gap-3 rounded-sm w-full">
           <Button
