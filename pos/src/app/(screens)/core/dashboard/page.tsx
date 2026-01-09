@@ -91,8 +91,33 @@ const Dashboard = () => {
     return type === "count" ? order.totalCount : order.totalSaleValue;
   }
 
-  function getIncome(type:"collected"|"remains"):number{
-analytics?.incomes.map((inc)=>inc.branch === branch ).
+  function getIncome(type: "collected" | "remains"): number {
+    const breakdown = analytics?.incomes.find(
+      (inc) => inc.branch === branch
+    )?.breakdown;
+    const totalAmount =
+      breakdown?.reduce((sum, item) => sum + item.amount, 0) ?? 0;
+
+    if (type === "collected") return totalAmount;
+    return getTotalValue("saleValue") - totalAmount;
+  }
+
+  function getChartData() {
+    const breakdown =
+      analytics?.incomes
+        .find((inc) => inc.branch === branch)
+        ?.breakdown.map((item, index) => ({
+          label: item.type,
+          value: item.count,
+          fill:
+            item.type === "Cash"
+              ? "var(--color-superbase)"
+              : item.type === "Credit"
+              ? "var(--color-destructive)"
+              : `var(--chart-${index + 1})`,
+        })) ?? [];
+
+    return breakdown;
   }
 
   console.log(analytics);
@@ -164,7 +189,7 @@ analytics?.incomes.map((inc)=>inc.branch === branch ).
     <div className="flex flex-col gap-5">
       <div className="flex gap-5 h-fit">
         <div className="flex flex-col gap-5">
-          <div className="flex gap-5 w-[500px]">
+          <div className="flex gap-5">
             <SelectOnSearch
               isLoading={isLoadingAnalytics || isLoadingProducts}
               icon={<Building2 className="text-white" size={18} />}
@@ -247,7 +272,7 @@ analytics?.incomes.map((inc)=>inc.branch === branch ).
                   {new Intl.NumberFormat("en-US", {
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2,
-                  }).format(getTotalValue("saleValue"))}
+                  }).format(getIncome("collected"))}
                 </span>
               )}
             </Card>
@@ -326,19 +351,19 @@ analytics?.incomes.map((inc)=>inc.branch === branch ).
                   {new Intl.NumberFormat("en-US", {
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2,
-                  }).format(getTotalValue("saleValue"))}
+                  }).format(getIncome("remains"))}
                 </span>
               )}
             </Card>
           </div>
         </div>
-        {/* <ChartPieLabel
+        <ChartPieLabel
           title="Payment Methods"
           description={timeFrame}
-          chartData={chartData}
+          chartData={getChartData()}
           isLoading={isLoadingAnalytics}
           extraDataArray={finalOrders}
-        /> */}
+        />
       </div>
       {/* <Card className="flex items-center font-semibold  text-muted-foreground">
         <div className="flex flex-col flex-1 items-center">
