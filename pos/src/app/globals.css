@@ -132,6 +132,10 @@
   --breakpoint-bxs: 580px;
   --breakpoint-bigmd: 860px;
   --breakpoint-midxl: 1350px;
+  --shadow-special-error: 0px 0px 10px rgba(240, 72, 60, 1);
+  --shadow-special-warning: 0px 0px 5px rgba(230, 108, 0, 1);
+  --shadow-special-success: 0px 0px 5px rgba(16, 88, 26, 1);
+  /* --shadow-special-sucess: 0px 0px 10px rgba(0, 0, 0, 0.25); */
 }
 
 @media (max-width: 380px) {

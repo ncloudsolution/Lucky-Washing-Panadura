@@ -91,6 +91,10 @@ const Dashboard = () => {
     return type === "count" ? order.totalCount : order.totalSaleValue;
   }
 
+  function getIncome(type:"collected"|"remains"):number{
+analytics?.incomes.map((inc)=>inc.branch === branch ).
+  }
+
   console.log(analytics);
   console.log(timeFrame, "tm");
 
@@ -109,14 +113,14 @@ const Dashboard = () => {
             acc.totalCount += order.totalCount;
             acc.totalSaleValue += order.totalSaleValue;
 
-            order.breakdown.forEach((item) => {
-              const existing = acc.breakdown.find((b) => b.type === item.type);
+            // order.breakdown.forEach((item) => {
+            //   const existing = acc.breakdown.find((b) => b.type === item.type);
 
-              if (existing) {
-                existing.count += item.count;
-                existing.saleValue += item.saleValue;
-              }
-            });
+            //   if (existing) {
+            //     existing.count += item.count;
+            //     existing.saleValue += item.saleValue;
+            //   }
+            // });
 
             return acc;
           },
@@ -124,12 +128,12 @@ const Dashboard = () => {
             branch: "All Branches",
             totalCount: 0,
             totalSaleValue: 0,
-            breakdown: [
-              { type: "Cash", count: 0, saleValue: 0 },
-              { type: "Card", count: 0, saleValue: 0 },
-              { type: "Bank", count: 0, saleValue: 0 },
-              { type: "Credit", count: 0, saleValue: 0 },
-            ],
+            // breakdown: [
+            //   { type: "Cash", count: 0, saleValue: 0 },
+            //   { type: "Card", count: 0, saleValue: 0 },
+            //   { type: "Bank", count: 0, saleValue: 0 },
+            //   { type: "Credit", count: 0, saleValue: 0 },
+            // ],
           }
         )
       : null;
@@ -141,26 +145,26 @@ const Dashboard = () => {
     ...(allBranchesObj ? [allBranchesObj] : []),
   ];
 
-  const chartData =
-    finalOrders
-      ?.find((i) => i.branch === branch)
-      ?.breakdown?.map((item, index) => ({
-        label: item.type,
-        value: item.count,
-        fill:
-          item.type === "Cash"
-            ? "var(--color-superbase)"
-            : item.type === "Credit"
-            ? "var(--color-destructive)"
-            : `var(--chart-${index + 1})`,
-      })) ?? [];
+  // const chartData =
+  //   finalOrders
+  //     ?.find((i) => i.branch === branch)
+  //     ?.breakdown?.map((item, index) => ({
+  //       label: item.type,
+  //       value: item.count,
+  //       fill:
+  //         item.type === "Cash"
+  //           ? "var(--color-superbase)"
+  //           : item.type === "Credit"
+  //           ? "var(--color-destructive)"
+  //           : `var(--chart-${index + 1})`,
+  //     })) ?? [];
 
   return (
     // border-2 border-red-700
     <div className="flex flex-col gap-5">
       <div className="flex gap-5 h-fit">
         <div className="flex flex-col gap-5">
-          <div className="flex gap-5">
+          <div className="flex gap-5 w-[500px]">
             <SelectOnSearch
               isLoading={isLoadingAnalytics || isLoadingProducts}
               icon={<Building2 className="text-white" size={18} />}
@@ -189,9 +193,9 @@ const Dashboard = () => {
             />
           </div>
 
-          <div className="flex gap-5">
+          <div className="flex gap-5 w-full">
             <Card className="flex items-center font-semibold flex-col text-muted-foreground min-w-[250px]">
-              Total Sales Count
+              Sales Count
               {isLoadingAnalytics ? (
                 <TextSkeleton
                   length={3}
@@ -206,7 +210,28 @@ const Dashboard = () => {
               )}
             </Card>
             <Card className="flex items-center flex-col text-muted-foreground min-w-[350px] h-fit font-semibold">
-              Total Sales Revenue ( Rs )
+              Sales Revenue ( Rs )
+              {isLoadingAnalytics ? (
+                <span className="flex text-6xl">
+                  <TextSkeleton
+                    length={5}
+                    numeric
+                    type="muted"
+                    textSize="text-6xl"
+                  />
+                  .00
+                </span>
+              ) : (
+                <span className="text-primary text-6xl">
+                  {new Intl.NumberFormat("en-US", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  }).format(getTotalValue("saleValue"))}
+                </span>
+              )}
+            </Card>
+            <Card className="flex items-center shadow-special-success flex-col text-muted-foreground min-w-[350px] h-fit font-semibold">
+              Sales Revenue Collected ( Rs )
               {isLoadingAnalytics ? (
                 <span className="flex text-6xl">
                   <TextSkeleton
@@ -227,71 +252,93 @@ const Dashboard = () => {
               )}
             </Card>
           </div>
+          <div className="flex w-full gap-5">
+            <Card className="flex flex-1 flex-col min-h-[200px] text-muted-foreground font-semibold">
+              Trending Products
+              {isLoadingProducts || isLoadingAnalytics ? (
+                <div className="flex flex-col mt-2 text-primary font-normal">
+                  {Array.from({ length: 5 }, (_, index) => (
+                    <div key={index} className="flex justify-between gap-5">
+                      <TextSkeleton
+                        length={15}
+                        type="muted"
+                        textSize="text-base"
+                      />
+                      <TextSkeleton
+                        length={5}
+                        numeric
+                        type="muted"
+                        textSize="text-base"
+                      />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-col mt-2 text-primary font-normal">
+                  {analytics && analytics.products.length > 0 ? (
+                    (() => {
+                      const branchData = analytics.products.find(
+                        (i) => i.branch === branch
+                      );
+                      if (
+                        !branchData ||
+                        !branchData.items ||
+                        branchData.items.length === 0
+                      ) {
+                        return <NoRecordsCard mini />;
+                      }
 
-          <Card className="max-w-[620px] min-h-[200px] text-muted-foreground font-semibold">
-            Trending Products
-            {isLoadingProducts || isLoadingAnalytics ? (
-              <div className="flex flex-col mt-2 text-primary font-normal">
-                {Array.from({ length: 5 }, (_, index) => (
-                  <div key={index} className="flex justify-between gap-5">
-                    <TextSkeleton
-                      length={15}
-                      type="muted"
-                      textSize="text-base"
-                    />
-                    <TextSkeleton
-                      length={5}
-                      numeric
-                      type="muted"
-                      textSize="text-base"
-                    />
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="flex flex-col mt-2 text-primary font-normal">
-                {analytics && analytics.products.length > 0 ? (
-                  (() => {
-                    const branchData = analytics.products.find(
-                      (i) => i.branch === branch
-                    );
-                    if (
-                      !branchData ||
-                      !branchData.items ||
-                      branchData.items.length === 0
-                    ) {
-                      return <NoRecordsCard mini />;
-                    }
-
-                    return branchData.items.map((it, index) => (
-                      <div
-                        className="flex w-full justify-between gap-5"
-                        key={index}
-                      >
-                        <span className="line-clamp-1">
-                          {getProductVariantFullNameByVarientId(
-                            products!,
-                            it.productVarientId
-                          )}
-                        </span>
-                        <span>{it.count}</span>
-                      </div>
-                    ));
-                  })()
-                ) : (
-                  <NoRecordsCard mini />
-                )}
-              </div>
-            )}
-          </Card>
+                      return branchData.items.map((it, index) => (
+                        <div
+                          className="flex w-full justify-between gap-5"
+                          key={index}
+                        >
+                          <span className="line-clamp-1">
+                            {getProductVariantFullNameByVarientId(
+                              products!,
+                              it.productVarientId
+                            )}
+                          </span>
+                          <span>{it.count}</span>
+                        </div>
+                      ));
+                    })()
+                  ) : (
+                    <NoRecordsCard mini />
+                  )}
+                </div>
+              )}
+            </Card>
+            <Card className="flex items-center flex-col justify-center shadow-special-warning text-muted-foreground min-w-[350px] font-semibold">
+              Sales Revenue Receivables ( Rs )
+              {isLoadingAnalytics ? (
+                <span className="flex text-6xl">
+                  <TextSkeleton
+                    length={5}
+                    numeric
+                    type="muted"
+                    textSize="text-6xl"
+                  />
+                  .00
+                </span>
+              ) : (
+                <span className="text-primary text-6xl">
+                  {new Intl.NumberFormat("en-US", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  }).format(getTotalValue("saleValue"))}
+                </span>
+              )}
+            </Card>
+          </div>
         </div>
-        <ChartPieLabel
+        {/* <ChartPieLabel
           title="Payment Methods"
           description={timeFrame}
           chartData={chartData}
           isLoading={isLoadingAnalytics}
           extraDataArray={finalOrders}
-        />
+        /> */}
       </div>
       {/* <Card className="flex items-center font-semibold  text-muted-foreground">
         <div className="flex flex-col flex-1 items-center">

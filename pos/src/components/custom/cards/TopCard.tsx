@@ -20,7 +20,7 @@ const TopCard = async ({ user }: { user: User }) => {
               </span>
 
               <span className="xl:text-sm bxs:text-[12px] text-[10px] xl:leading-[14px] bxs:leading-[12px] leading-[10px] h-fit italic text-muted-foreground">
-                {user.role} Access
+                {user.role} Access ({user.branch})
               </span>
             </div>
           )}

@@ -15,8 +15,8 @@ export const GET = auth(async function GET(req: any) {
   // const authRole = "director" as T_Role;
   // const authBranch = "Bentota";
 
-  console.log(authRole, "auth role");
-  console.log(authBranch, "auth branch");
+  // console.log(authRole, "auth role");
+  // console.log(authBranch, "auth branch");
 
   if (!req.auth) {
     return NextResponse.json(
@@ -42,7 +42,7 @@ export const GET = auth(async function GET(req: any) {
         { status: 403 }
       );
     }
-    console.log(authBranch, "auth bra");
+
     const branches = (
       await prisma.branchMeta.findMany({
         select: { branch: true },
@@ -57,91 +57,22 @@ export const GET = auth(async function GET(req: any) {
       select: {
         id: true,
         branch: true,
+        paymentMethod: true,
         saleValue: true,
       },
       orderBy: { createdAt: "desc" },
-    });
-
-    const income = await prisma.income.findMany({
-      where: {
-        createdAt: { gte: getDateRange(timeFrame) },
-      },
-      select: {
-        paymentMethod: true,
-        amount: true,
-        order: {
-          where: { ...(authRole !== "director" && { branch: authBranch }) },
-          select: {
-            branch: true,
-          },
-        },
-      },
-      orderBy: { createdAt: "desc" },
-    });
-
-    const formattedIncome = income
-      .filter((i) => i.order) // remove nulls
-      .map((i) => ({
-        branch: i.order!.branch, // ! tells TS this is definitely not null
-        paymentMethod: i.paymentMethod,
-        amount: Number(i.amount),
-      }));
-
-    const groupedByBranch = formattedIncome.reduce((acc, curr) => {
-      const branchName = curr.branch;
-      if (!acc[branchName]) {
-        acc[branchName] = {};
-      }
-
-      const pm = curr.paymentMethod;
-      if (!acc[branchName][pm]) {
-        acc[branchName][pm] = { count: 0, amount: 0 };
-      }
-
-      acc[branchName][pm].count += 1;
-      acc[branchName][pm].amount += curr.amount;
-
-      return acc;
-    }, {} as Record<string, Record<string, { count: number; amount: number }>>);
-
-    // Step 4: Convert to your desired array format
-    const incomeResult = Object.entries(groupedByBranch).map(
-      ([branch, payments]) => ({
-        branch,
-        breakdown: Object.entries(payments).map(([type, data]) => ({
-          type,
-          count: data.count,
-          amount: data.amount,
-        })),
-      })
-    );
-
-    // Step 5: Add "All Branches" summary
-    const allBranchTotals: Record<string, { count: number; amount: number }> =
-      {};
-
-    incomeResult.forEach((branchObj) => {
-      branchObj.breakdown.forEach(({ type, count, amount }) => {
-        if (!allBranchTotals[type])
-          allBranchTotals[type] = { count: 0, amount: 0 };
-        allBranchTotals[type].count += count;
-        allBranchTotals[type].amount += amount;
-      });
-    });
-
-    incomeResult.push({
-      branch: "All Branches",
-      breakdown: Object.entries(allBranchTotals).map(([type, data]) => ({
-        type,
-        count: data.count,
-        amount: data.amount,
-      })),
     });
 
     const initialObj: BranchSummary = {
       branch: "xx",
       totalCount: 0,
       totalSaleValue: 0,
+      breakdown: [
+        { type: "Cash", count: 0, saleValue: 0 },
+        { type: "Card", count: 0, saleValue: 0 },
+        { type: "Bank", count: 0, saleValue: 0 },
+        { type: "Credit", count: 0, saleValue: 0 },
+      ],
     };
 
     const initialArray: BranchSummary[] = [];
@@ -152,6 +83,7 @@ export const GET = auth(async function GET(req: any) {
         initialArray.push({
           ...initialObj,
           branch: authBranch,
+          breakdown: initialObj.breakdown.map((b) => ({ ...b })),
         });
         break;
       }
@@ -159,6 +91,7 @@ export const GET = auth(async function GET(req: any) {
       initialArray.push({
         ...initialObj,
         branch: branches[i],
+        breakdown: initialObj.breakdown.map((b) => ({ ...b })), // ⭐ deep clone
       });
     }
 
@@ -169,12 +102,41 @@ export const GET = auth(async function GET(req: any) {
       branchObj.totalCount += 1;
       branchObj.totalSaleValue += Number(orders[i].saleValue);
 
+      const breakDownObj = branchObj.breakdown.find(
+        (x) => x.type === orders[i].paymentMethod
+      )!;
+      breakDownObj.count += 1;
+      breakDownObj.saleValue += Number(orders[i].saleValue);
+
       if (!orderIdArray.includes(orders[i].id)) {
         orderIdArray.push(orders[i].id);
       }
     }
 
     console.log(orders, "or");
+
+    // const items = await prisma.orderItem.groupBy({
+    //   by: ["productVarientId"],
+    //   where: {
+    //     orderId: { in: orderIdArray },
+    //   },
+    //   _sum: {
+    //     quantity: true,
+    //   },
+    //   orderBy: {
+    //     _sum: {
+    //       quantity: "desc",
+    //     },
+    //   },
+    //   take: 5,
+    // });
+
+    // console.log(items);
+
+    // const itemsFinalArray = items.map((i) => ({
+    //   productVarientId: i.productVarientId,
+    //   quantity: i._sum.quantity,
+    // }));
 
     const itemsWithBranch = await prisma.orderItem.findMany({
       where: {
@@ -245,45 +207,44 @@ export const GET = auth(async function GET(req: any) {
 
     // console.log(itemsFinalArray, "items");
 
-    // const stockMetas = await prisma.productStock.findMany({
-    //   where: {
-    //     ...(authRole === "manager" || authRole === "uniter"
-    //       ? { branch: authBranch }
-    //       : {}),
+    const stockMetas = await prisma.productStock.findMany({
+      where: {
+        ...(authRole === "manager" || authRole === "uniter"
+          ? { branch: authBranch }
+          : {}),
 
-    //     createdAt: {
-    //       gte: getDateRange(timeFrame),
-    //     },
-    //   },
-    //   orderBy: {
-    //     createdAt: "desc",
-    //   },
-    // });
+        createdAt: {
+          gte: getDateRange(timeFrame),
+        },
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
 
-    // const totals = stockMetas.reduce(
-    //   (acc, item) => {
-    //     const quantity = Number(item.quantity);
-    //     const unitPrice = Number(item.unitPrice);
-    //     const discount = Number(item.discount ?? 0);
+    const totals = stockMetas.reduce(
+      (acc, item) => {
+        const quantity = Number(item.quantity);
+        const unitPrice = Number(item.unitPrice);
+        const discount = Number(item.discount ?? 0);
 
-    //     const value = quantity * unitPrice;
+        const value = quantity * unitPrice;
 
-    //     if (item.in) {
-    //       acc.totalIn += value - discount;
-    //     } else {
-    //       acc.totalOut += value;
-    //     }
+        if (item.in) {
+          acc.totalIn += value - discount;
+        } else {
+          acc.totalOut += value;
+        }
 
-    //     return acc;
-    //   },
-    //   { totalIn: 0, totalOut: 0 }
-    // );
+        return acc;
+      },
+      { totalIn: 0, totalOut: 0 }
+    );
 
     const finalData = {
       orders: initialArray,
       products: top5PerBranch,
-      incomes: incomeResult,
-      // stocks: { stockInValue: totals.totalIn, stockOutValue: totals.totalOut },
+      stocks: { stockInValue: totals.totalIn, stockOutValue: totals.totalOut },
     };
 
     return NextResponse.json(

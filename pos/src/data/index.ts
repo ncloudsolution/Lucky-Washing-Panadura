@@ -437,7 +437,7 @@ export type BranchSummary = {
   branch: string;
   totalCount: number;
   totalSaleValue: number;
-  breakdown: BreakdownItem[];
+  // breakdown: BreakdownItem[];
 };
 
 export interface IAnalytics {
@@ -446,10 +446,14 @@ export interface IAnalytics {
     branch: string;
     items: { productVarientId: string; count: number }[]; // count or quantity as number
   }[];
-  stocks: {
-    stockInValue: number;
-    stockOutValue: number;
-  };
+  // stocks: {
+  //   stockInValue: number;
+  //   stockOutValue: number;
+  // };
+  incomes: {
+    branch: string; // ! tells TS this is definitely not null
+    breakdown: { type: TPaymentMethod; count: number; amount: number }[];
+  }[];
 }
 
 export interface IPieChartData {
