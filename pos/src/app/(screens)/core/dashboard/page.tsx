@@ -362,7 +362,7 @@ const Dashboard = () => {
           description={timeFrame}
           chartData={getChartData()}
           isLoading={isLoadingAnalytics}
-          extraDataArray={finalOrders}
+          extraDataArray={analytics?.incomes}
         />
       </div>
       {/* <Card className="flex items-center font-semibold  text-muted-foreground">

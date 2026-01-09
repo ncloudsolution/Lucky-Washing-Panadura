@@ -62,7 +62,12 @@ export function ChartPieLabel({
                           {new Intl.NumberFormat("en-US", {
                             minimumFractionDigits: 2,
                             maximumFractionDigits: 2,
-                          }).format(pay.totalSaleValue)}
+                          }).format(
+                            pay.breakdown?.reduce(
+                              (sum, item) => sum + item.amount,
+                              0
+                            ) ?? 0
+                          )}
                         </span>
                       </span>
                       {pay?.breakdown?.map((b, ind) => (
@@ -76,7 +81,7 @@ export function ChartPieLabel({
                               {new Intl.NumberFormat("en-US", {
                                 minimumFractionDigits: 2,
                                 maximumFractionDigits: 2,
-                              }).format(b.saleValue)}
+                              }).format(b.amount)}
                             </span>
                           </div>
                         </div>
