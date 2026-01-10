@@ -123,6 +123,7 @@ const ComplexVariations = ({
                     )}
                     <FormControl>
                       <Input
+                        autoComplete="off"
                         className="w-full"
                         value={
                           sinhalaMode ? singlishToUnicode(rawValue) : rawValue

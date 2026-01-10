@@ -467,6 +467,25 @@ const FormCoreProduct = () => {
               </>
             )}
 
+            {productMedia && complexProduct && step === 3 && (
+              <>
+                <ComplexVariations
+                  control={control}
+                  fields={variationFields}
+                  removeField={removeVariation}
+                  errors={errors.variation}
+                  sinhalaMode={sinhalaModeValue}
+                />
+                {/* <Button
+                  type="button"
+                  onClick={handleAddVariation}
+                  className={`mt-2 w-full  border-1 border-primary bg-transparent text-primary hover:bg-transparent`}
+                >
+                  <Plus size={18} /> Add More
+                </Button> */}
+              </>
+            )}
+
             {step === StepObject.length && (
               <>
                 <SelectInput
