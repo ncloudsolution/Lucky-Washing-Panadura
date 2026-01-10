@@ -5,14 +5,13 @@ import { DeleteDialog } from "@/components/custom/dialogs/DeleteDialog";
 import FormCustomer, {
   ICustomer,
 } from "@/components/custom/forms/FormCustomer";
+import FormExpense from "@/components/custom/forms/FormExpense";
 import ViewAccessChecker from "@/components/custom/other/AccessChecker";
 import ListSkeleton from "@/components/custom/skeleton/ListSkeleton";
-import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BasicDataFetch, formatDate } from "@/utils/common";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { includes } from "lodash";
-import { Pencil, Search } from "lucide-react";
+import { Pencil } from "lucide-react";
 import { useSession } from "next-auth/react";
 import React, { useState } from "react";
 import { toast } from "sonner";
@@ -64,10 +63,7 @@ const Expenses = () => {
             permission="create:customer"
             userRole={role}
             component={
-              <AddNewDialog
-                form={<FormCustomer />}
-                triggerText="Add Customer"
-              />
+              <AddNewDialog form={<FormExpense />} triggerText="Add Expense" />
             }
             skeleton={
               <Skeleton className="size-[40px] rounded-sm bg-gray-300 border-slate-400" />
