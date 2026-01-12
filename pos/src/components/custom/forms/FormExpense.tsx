@@ -50,8 +50,6 @@ const FormExpense = ({
   type?: "edit" | "new";
   expenseArray: string[];
 }) => {
-  //1 - ✅ set ref
-  const [activeOption, setActiveOption] = useState<TPaymentMethod>("Cash");
   const closeRef = React.useRef<HTMLButtonElement | null>(null);
   const queryClient = useQueryClient();
 
@@ -62,7 +60,7 @@ const FormExpense = ({
       id: data?.id ?? "",
       category: data?.category ?? "",
       amount: data?.amount ?? "",
-      paymentMethod: data?.paymentMethod ?? activeOption,
+      paymentMethod: data?.paymentMethod ?? "Cash",
       remarks: data?.remarks ?? "",
     },
     mode: "onSubmit",
@@ -78,7 +76,6 @@ const FormExpense = ({
   } = formMethods;
 
   const onSubmit = async (formValues: FormFields) => {
-    return console.log(formValues);
     if (type === "edit") {
       const set1 = {
         category: data!.category,
@@ -120,7 +117,7 @@ const FormExpense = ({
       closeRef.current?.click();
 
       if (type === "new") {
-        queryClient.setQueryData(["expenses"], (oldData: any) => {
+        queryClient.setQueryData(["recent-expenses"], (oldData: any) => {
           const oldArray: IExpense[] = oldData?.data ?? [];
 
           const newData: IExpense = {
@@ -136,7 +133,7 @@ const FormExpense = ({
           };
         });
       } else {
-        queryClient.setQueryData(["expenses"], (oldData: any) => {
+        queryClient.setQueryData(["recent-expenses"], (oldData: any) => {
           const oldArray: IExpense[] = oldData?.data ?? [];
           const newArray = oldArray.map((i) =>
             i.id !== data?.id
@@ -165,6 +162,8 @@ const FormExpense = ({
       toast.error(errorMessage);
     }
   };
+
+  const paymentMethod = formMethods.watch("paymentMethod");
 
   return (
     <FormWrapper
@@ -218,14 +217,13 @@ const FormExpense = ({
                   <Button
                     type="button"
                     onClick={() => {
-                      if (activeOption !== opt.name) {
-                        setActiveOption(opt.name);
+                      if (paymentMethod !== opt.name) {
                         setValue("paymentMethod", opt.name);
                       }
                     }}
                     key={index}
                     className={`flex flex-1 bg-secondary rounded-sm  hover:shadow-md ${
-                      activeOption === opt.name &&
+                      paymentMethod === opt.name &&
                       "bg-subbase text-white hover:bg-subbase hover:text-white"
                     }`}
                     variant={"ghost"}
