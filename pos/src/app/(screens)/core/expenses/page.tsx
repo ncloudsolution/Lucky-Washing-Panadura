@@ -9,6 +9,11 @@ import FormExpense from "@/components/custom/forms/FormExpense";
 import ViewAccessChecker from "@/components/custom/other/AccessChecker";
 import ListSkeleton from "@/components/custom/skeleton/ListSkeleton";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  ensureClientInit,
+  getBusinessMeta,
+  saveCategory,
+} from "@/data/dbcache";
 import { BasicDataFetch, formatDate } from "@/utils/common";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Pencil } from "lucide-react";
@@ -39,6 +44,34 @@ const Expenses = () => {
     staleTime: 1000 * 60 * 5,
   });
 
+  const { data: expenseArray = [], isLoading: isExpenseArray } = useQuery({
+    queryKey: ["expense-categories"],
+    queryFn: async (): Promise<string[]> => {
+      await ensureClientInit();
+
+      // 1️⃣ Try cache (correct field)
+      const meta = await getBusinessMeta();
+
+      if (meta?.incomeCategories?.length) {
+        return [...meta.expenseCategories];
+      }
+
+      // 2️⃣ Fetch API
+      const response = await BasicDataFetch({
+        method: "GET",
+        endpoint: "/api/company/categories/expense",
+      });
+
+      const apiCategories: string[] = response?.data ?? [];
+
+      // 3️⃣ Save to cache
+      await saveCategory(apiCategories, "expense");
+
+      return apiCategories;
+    },
+    staleTime: 1000 * 60 * 5,
+  });
+
   console.log(customers);
 
   // Handle settled state with useEffect
@@ -63,7 +96,10 @@ const Expenses = () => {
             permission="create:customer"
             userRole={role}
             component={
-              <AddNewDialog form={<FormExpense />} triggerText="Add Expense" />
+              <AddNewDialog
+                form={<FormExpense expenseArray={expenseArray} />}
+                triggerText="Add Expense"
+              />
             }
             skeleton={
               <Skeleton className="size-[40px] rounded-sm bg-gray-300 border-slate-400" />

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { multiInputSchema, phoneNumberSchema } from "./common";
-import { ENUMStaffRolesArray } from "@/data";
+import { ENUMPaymentMethodArray, ENUMStaffRolesArray } from "@/data";
 
 export const StaffSchema = z
   .object({
@@ -67,4 +67,17 @@ export const CategorySchema = z.object({
         .max(50, "Must be less than 50 characters"),
     })
   ),
+});
+
+export const ExpenseSchema = z.object({
+  id: z.string().nullable().optional(),
+  category: z.string().nonempty({ message: "Category is required" }),
+  paymentMethod: z.enum(ENUMPaymentMethodArray, {
+    error: () => ({ message: "Payment method is required" }),
+  }),
+  amount: z.union([
+    z.number().gt(0, { message: "Amount must be greater than 0" }),
+    z.string().nonempty({ message: "Amount is required" }),
+  ]),
+  remarks: z.string().max(1000, "Must be less than 1000 charactors"),
 });

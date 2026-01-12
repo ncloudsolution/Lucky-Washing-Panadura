@@ -49,11 +49,10 @@ model ProductVarient {
 model Expense {
   id            String   @id @default(cuid())
   category      String
-  amount        String
+  amount        Decimal  @db.Decimal(10, 2)
   paymentMethod String
-  remarks       String
+  remarks       String?
   createdAt     DateTime @default(now())
-  orderMetaId   String?
 }
 
 model Income {
