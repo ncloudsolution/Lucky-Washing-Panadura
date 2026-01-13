@@ -405,22 +405,33 @@ const Dashboard = () => {
             <Card className="shadow-special-success flex flex-1 flex-col min-h-[200px] text-muted-foreground font-semibold">
               Collected Net Operating Cash Flow ( Rs )
               {isLoadingProducts || isLoadingAnalytics ? (
-                <div className="flex flex-col mt-2 text-primary font-normal">
-                  {Array.from({ length: 5 }, (_, index) => (
-                    <div key={index} className="flex justify-between gap-5">
-                      <TextSkeleton
-                        length={15}
-                        type="muted"
-                        textSize="text-base"
-                      />
-                      <TextSkeleton
-                        length={5}
-                        numeric
-                        type="muted"
-                        textSize="text-base"
-                      />
-                    </div>
-                  ))}
+                <div className="flex w-full justify-between items-center">
+                  <span className="flex text-6xl">
+                    <TextSkeleton
+                      length={5}
+                      numeric
+                      type="muted"
+                      textSize="text-6xl"
+                    />
+                    .00
+                  </span>{" "}
+                  <div className="flex flex-col mt-2 text-primary font-normal">
+                    {Array.from({ length: 5 }, (_, index) => (
+                      <div key={index} className="flex justify-between gap-5">
+                        <TextSkeleton
+                          length={15}
+                          type="muted"
+                          textSize="text-base"
+                        />
+                        <TextSkeleton
+                          length={5}
+                          numeric
+                          type="muted"
+                          textSize="text-base"
+                        />
+                      </div>
+                    ))}
+                  </div>
                 </div>
               ) : (
                 <div className="flex justify-around h-full">
