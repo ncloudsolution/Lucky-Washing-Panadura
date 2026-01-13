@@ -26,8 +26,6 @@ export function PriceDropDown({
   unitPrice: number;
   priceVariations: IPriceVarient[];
 }) {
-  console.log(unitPrice, "unit price");
-
   const { data: session, status } = useSession();
   const role = session?.user.role.toLowerCase();
   const branch = session?.user.branch.toLowerCase();

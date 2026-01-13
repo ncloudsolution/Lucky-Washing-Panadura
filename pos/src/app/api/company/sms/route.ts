@@ -59,9 +59,7 @@ export const POST = auth(async function POST(req) {
       { status: 201 }
     );
   } catch (error) {
-    console.log(error);
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
-      console.log(error);
       let message = "Something wrong with your connection";
 
       if (error.code === "P1001") {
@@ -102,8 +100,6 @@ export const GET = async function GET(req: NextRequest) {
       { status: 200 }
     );
   } catch (error) {
-    console.error(error);
-
     let message = "Internal server error";
 
     if (error instanceof Prisma.PrismaClientKnownRequestError) {

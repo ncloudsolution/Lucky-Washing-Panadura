@@ -55,8 +55,6 @@ const Category = () => {
     },
   });
 
-  console.log(sms);
-
   const { data: CategoryArray = [], isLoading: isLoadingCatagoryArray } =
     useQuery({
       queryKey: ["categories"],

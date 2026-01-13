@@ -123,7 +123,6 @@ const Expenses = () => {
           <div className="flex flex-col h-full justify-between gap-2 ">
             <div className="flex flex-col gap-2 flex-1">
               {finalArray.map((ex, index) => {
-                console.log(ex.createdAt);
                 const createdAt = ex.createdAt ? new Date(ex.createdAt) : null;
 
                 if (!createdAt) return null;

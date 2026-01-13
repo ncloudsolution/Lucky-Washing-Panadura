@@ -24,9 +24,11 @@ import {
   Landmark,
 } from "lucide-react";
 import SelectInput from "../inputs/SelectInput";
+import { useSession } from "next-auth/react";
 
 export interface IExpense {
   id?: string;
+  branch?: string;
   category: string;
   amount: number;
   paymentMethod: TPaymentMethod;
@@ -50,6 +52,8 @@ const FormExpense = ({
   type?: "edit" | "new";
   expenseArray: string[];
 }) => {
+  const { data: session, status } = useSession();
+
   const closeRef = React.useRef<HTMLButtonElement | null>(null);
   const queryClient = useQueryClient();
 
@@ -58,6 +62,7 @@ const FormExpense = ({
     resolver: zodResolver(ExpenseSchema),
     defaultValues: {
       id: data?.id ?? "",
+      branch: session?.user.branch,
       category: data?.category ?? "",
       amount: data?.amount ?? "",
       paymentMethod: data?.paymentMethod ?? "Cash",
@@ -91,19 +96,18 @@ const FormExpense = ({
         remarks: formValues.remarks,
       };
 
-      // console.log(
+      //
       //   "formValues.variation:",
       //   JSON.stringify(formValues.variation)
       // );
 
       if (isEqual(set1, set2)) {
-        console.log("no chnages");
         return setError("root", {
           message: "No changes detected. Please modify at least one field.",
         });
       }
 
-      // return console.log("changes detected");
+      // return
     }
     try {
       const res = await BasicDataFetch({

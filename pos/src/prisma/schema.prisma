@@ -48,6 +48,7 @@ model ProductVarient {
 
 model Expense {
   id            String   @id @default(cuid())
+  branch        String
   category      String
   amount        Decimal  @db.Decimal(10, 2)
   paymentMethod String

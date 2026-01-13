@@ -64,19 +64,18 @@ const FormCustomer = ({
         mobile: formValues.mobile,
       };
 
-      // console.log(
+      //
       //   "formValues.variation:",
       //   JSON.stringify(formValues.variation)
       // );
 
       if (isEqual(set1, set2)) {
-        console.log("no chnages");
         return setError("root", {
           message: "No changes detected. Please modify at least one field.",
         });
       }
 
-      // return console.log("changes detected");
+      // return
     }
     try {
       const res = await BasicDataFetch({

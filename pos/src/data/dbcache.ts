@@ -216,11 +216,11 @@ export async function getCachedCategories(): Promise<string[]> {
 
 export async function getOrderType() {
   const client = await cachedb.client.get(clientPrimaryKey);
-  console.log("client from DB:", client);
+
   if (!client) return null;
 
   const { id, lastProductFetch, ...rest } = client;
-  console.log("rest returned:", rest); // should contain editMode, edCustomerMobile, etc.
+
   return rest;
 }
 
@@ -475,9 +475,6 @@ export async function addtoCacheCart(
       quantity,
     };
 
-    console.log(data, "obj");
-    console.log(prices, "prices");
-
     await cachedb.cartItem.add(data);
     addedCount++; // ✅ mark one successful add
   }
@@ -721,10 +718,6 @@ export async function editInvoice(data: any) {
   // Step 1: Clear the current cart
   await removeAllFromCacheCart();
 
-  console.log(data, "inside edit");
-  console.log(data.baseData.customer, "cs");
-  console.log(data.baseData.customerMobile, "mb");
-
   await setCurrentCustomer(
     data.baseData.customer,
     data.baseData.customerMobile
@@ -774,11 +767,6 @@ export async function editInvoice(data: any) {
     })
   );
   toast.success(`Cart Filled with Invoice No ${data.baseData.invoiceId} Items`);
-
-  console.log(
-    "Cart successfully updated with invoice:",
-    data.baseData.invoiceId
-  );
 }
 
 // current customer operations -------------------------------- current customer operations

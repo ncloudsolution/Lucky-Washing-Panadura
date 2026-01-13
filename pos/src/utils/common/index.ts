@@ -134,23 +134,15 @@ export const getProductVariantFullNameByVarientId = (
   productMetas: ICacheProduct[],
   variantId: string
 ) => {
-  console.log(productMetas, "data recived");
-  console.log(variantId, "id recived");
   const product = productMetas.find((pr) =>
     pr.varients.some((vr) => vr.id === variantId)
   );
-
-  console.log("a");
 
   if (!product) return null;
 
   const variant = product.varients.find((v) => v.id === variantId);
 
-  console.log("b");
-
   if (!variant) return null;
-
-  console.log("c");
 
   return variant.variation?.Name
     ? `${product.name} - ${variant.variation.Name}`
@@ -164,8 +156,6 @@ export const getProductMetricByVarientId = (
   const product = productMetas.find((pr) =>
     pr.varients.some((vr) => vr.id === variantId)
   );
-
-  console.log("a");
 
   if (!product) return null;
 

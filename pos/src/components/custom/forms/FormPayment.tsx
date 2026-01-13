@@ -59,13 +59,11 @@ const FormPayment = ({
   // useEffect(() => {
   //   if (selectedGateway !== "bankTransfer") {
   //     setValue("paymentRecipt", undefined);
-  //     console.log("set");
+  //
   //   }
   // }, [selectedGateway, setValue]);
 
   const onSubmit = async (data: FormFields) => {
-    console.log(data, "pay-data");
-
     if (data.gateway === "payhere")
       return handlePayHerePayment({
         order_id: "ItemNo12345",
@@ -81,13 +79,9 @@ const FormPayment = ({
         currency: "LKR",
       });
 
-      console.log(gatewayUrl, "url");
-
       // Set the data once the payment URL is available
       return setData({ gatewayUrl: gatewayUrl });
     }
-
-    console.log("still develoing");
 
     // await regularFormSubmisssion({
     //   apiPath: "api/..",

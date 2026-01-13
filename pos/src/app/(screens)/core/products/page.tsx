@@ -68,8 +68,6 @@ const Products = () => {
 
   const [selectedCategoryId, setSelectedCategoryId] = useState("0");
 
-  console.log(role);
-
   const {
     data: products,
     isLoading,
@@ -81,7 +79,6 @@ const Products = () => {
         await getCacheProductsWithVariants();
 
       if (cachedProducts.length > 0 && !expired) {
-        console.log("Cache is fresh");
         return cachedProducts;
       }
 
@@ -103,7 +100,6 @@ const Products = () => {
     staleTime: 1000 * 60 * 5,
   });
 
-  console.log(products, "in pro page");
   const baseProducts = filteredProducts === null ? products : filteredProducts;
 
   const selectedCategory = FinalCategoryItems.find(

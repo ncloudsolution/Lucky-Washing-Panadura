@@ -137,7 +137,6 @@ export const POST = auth(async function POST(req: any) {
       { status: 201 }
     );
   } catch (err) {
-    console.error(err);
     return NextResponse.json(
       { success: false, message: "Internal Server Error" },
       { status: 500 }
@@ -157,8 +156,6 @@ export const GET = auth(async function GET(req: any) {
   //testing purpose
   // const authRole = "uniter" as T_Role;
 
-  console.log(authRole, "auth role");
-  console.log(authBranch, "auth branch");
   try {
     switch (type) {
       //############## GET PARTICULAR MEMBER ONLY LIMITED DATA - ALL HAVE ACCESS #################
@@ -240,7 +237,6 @@ export const GET = auth(async function GET(req: any) {
       }
     }
   } catch (err) {
-    console.error(err);
     return NextResponse.json(
       { success: false, message: "Internal Server Error" },
       { status: 500 }

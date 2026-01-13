@@ -38,8 +38,6 @@ export const POST = auth(async function POST(req: any) {
     //testing purpose
     // const authRole = "uniter" as T_Role;
 
-    console.log(authRole, "auth role");
-
     if (
       !hasPermission({
         userRole: authRole,
@@ -100,7 +98,6 @@ export const POST = auth(async function POST(req: any) {
       { status: 201 }
     );
   } catch (err) {
-    console.error(err);
     return NextResponse.json(
       { success: false, message: "Internal Server Error" },
       { status: 500 }
@@ -139,8 +136,6 @@ export const PUT = auth(async function POST(req: any) {
 
     //testing purpose
     // const authRole = "uniter" as T_Role;
-
-    console.log(authRole, "auth role");
 
     if (
       !hasPermission({
@@ -221,7 +216,6 @@ export const PUT = auth(async function POST(req: any) {
       { status: 200 }
     );
   } catch (err) {
-    console.error(err);
     return NextResponse.json(
       { success: false, message: "Internal Server Error" },
       { status: 500 }
@@ -250,8 +244,6 @@ export const DELETE = auth(async function POST(req: any) {
 
     //testing purpose
     // const authRole = "uniter" as T_Role;
-
-    console.log(authRole, "auth role");
 
     if (
       !hasPermission({
@@ -307,7 +299,6 @@ export const DELETE = auth(async function POST(req: any) {
       { status: 200 }
     );
   } catch (err) {
-    console.error(err);
     return NextResponse.json(
       { success: false, message: "Internal Server Error" },
       { status: 500 }

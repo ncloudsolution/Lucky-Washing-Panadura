@@ -71,6 +71,11 @@ export const CategorySchema = z.object({
 
 export const ExpenseSchema = z.object({
   id: z.string().nullable().optional(),
+  branch: z
+    .string()
+    .nonempty({ message: "Branch is required" })
+    .min(2, { message: "Branch at least 2 characters" })
+    .max(100, "Must be less than 100 characters"),
   category: z.string().nonempty({ message: "Category is required" }),
   paymentMethod: z.enum(ENUMPaymentMethodArray, {
     error: () => ({ message: "Payment method is required" }),

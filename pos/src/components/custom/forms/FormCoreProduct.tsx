@@ -89,8 +89,6 @@ const FormCoreProduct = () => {
     }));
   }, [CategoryArray]);
 
-  console.log(FinalCategoryItems);
-
   const formMethods = useForm<FormFields>({
     resolver: zodResolver(ProductCoreSchema),
     defaultValues: {
@@ -122,7 +120,7 @@ const FormCoreProduct = () => {
     formState: { isSubmitting, errors },
   } = formMethods;
 
-  // console.log("Form Errors:", errors);
+  //
 
   const complexProduct = watch("complex");
   const sinhalaModeValue = watch("sinhalaMode");
@@ -186,10 +184,7 @@ const FormCoreProduct = () => {
         );
 
         modifiedData = { ...data, images: uploadedImageUrl };
-        console.log("chek im------------------------------------");
       }
-
-      console.log(uploadedImageUrl, "Up");
 
       const res = await BasicDataFetch({
         // Added await here
@@ -286,7 +281,6 @@ const FormCoreProduct = () => {
   ];
 
   const [step, setStep] = useState(1);
-  console.log(step);
 
   const handleNext = async (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();

@@ -9,10 +9,8 @@ import { NextRequest, NextResponse } from "next/server";
 export const GET = async function GET(req: NextRequest) {
   try {
     const business = await prisma.businessMeta.findFirst({});
-    console.log(business);
-    const categories = business?.expenseCategories ?? [];
 
-    console.log(categories);
+    const categories = business?.expenseCategories ?? [];
 
     return NextResponse.json(
       {
@@ -26,8 +24,6 @@ export const GET = async function GET(req: NextRequest) {
       { status: 200 }
     );
   } catch (error) {
-    console.error(error);
-
     let message = "Internal server error";
 
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
@@ -50,8 +46,6 @@ export const GET = async function GET(req: NextRequest) {
 export const POST = auth(async function POST(req) {
   const data = await req.json();
   const categories: { value: string }[] = data.categories;
-
-  console.log(data);
 
   // Backend validation
   const { validationStatus, validationResponse } = backendDataValidation({
@@ -130,9 +124,7 @@ export const POST = auth(async function POST(req) {
       { status: 201 }
     );
   } catch (error) {
-    console.log(error);
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
-      console.log(error);
       let message = "Something wrong with your connection";
 
       if (error.code === "P1001") {
@@ -163,12 +155,9 @@ export const DELETE = auth(async function DELETE(req) {
   try {
     const data = await req.json();
     const category = data.category;
-    console.log(category);
 
     const business = await prisma.businessMeta.findFirst({});
     const categories = business?.expenseCategories ?? [];
-
-    console.log(categories);
 
     if (!req.auth) {
       return NextResponse.json(
@@ -230,7 +219,6 @@ export const DELETE = auth(async function DELETE(req) {
     }
 
     const newCategories = categories.filter((i) => i !== category);
-    console.log(newCategories);
 
     await prisma.businessMeta.update({
       where: { id: business?.id },
@@ -250,8 +238,6 @@ export const DELETE = auth(async function DELETE(req) {
       { status: 200 }
     );
   } catch (error) {
-    console.error(error);
-
     let message = "Internal server error";
 
     if (error instanceof Prisma.PrismaClientKnownRequestError) {

@@ -49,7 +49,7 @@ const FormTempMiniTransfer = ({
       value,
     }));
   }
-  console.log(nameAndMetaList, "n&id");
+
   const transformedVariation = transformToKeyValue(data.variation);
 
   const closeRef = React.useRef<HTMLButtonElement | null>(null);
@@ -93,8 +93,8 @@ const FormTempMiniTransfer = ({
   const queryClient = useQueryClient();
 
   const onSubmit = async (formValues: FormFields) => {
-    // return console.log(formValues);
-    console.log(formValues);
+    // return
+
     try {
       const res = await BasicDataFetch({
         method: "PUT",

@@ -20,16 +20,13 @@ export async function singleImageSubmission(file: File, path: string) {
   try {
     await uploadBytes(storageRef, file);
     url = await getDownloadURL(storageRef);
-  } catch (error) {
-    console.error("Error uploading the file", error);
-  }
+  } catch (error) {}
 
   return url;
 }
 
 export async function deleteSingleImage(imageUrl: string) {
   if (!imageUrl) {
-    console.error("No image URL provided");
     return false;
   }
 
@@ -39,10 +36,9 @@ export async function deleteSingleImage(imageUrl: string) {
 
     // Delete the file
     await deleteObject(storageRef);
-    console.log("Image deleted successfully");
+
     return true;
   } catch (error) {
-    console.error("Error deleting the image", error);
     return false;
   }
 }

@@ -35,7 +35,7 @@ export function ProfileBtn({ user }: { user: User }) {
   const [popoverOpen, setPopoverOpen] = useState(false);
 
   //   const isMerchant = session?.user.role === "merchant";
-  //   console.log(isMerchant, "ismerch");
+  //
   //   const {
   //     data: profile,
   //     isLoading,
@@ -59,7 +59,7 @@ export function ProfileBtn({ user }: { user: User }) {
   //     staleTime: 1000 * 60 * 5,
   //   });
 
-  //   console.log(profile, "my profile");
+  //
   return (
     <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
       <TipWrapper triggerText="Profile">

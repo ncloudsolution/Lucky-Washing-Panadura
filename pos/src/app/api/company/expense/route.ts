@@ -21,8 +21,6 @@ export const POST = auth(async function POST(req) {
     return validationResponse;
   }
 
-  console.log(data);
-
   if (!req.auth) {
     return NextResponse.json(
       {
@@ -67,9 +65,7 @@ export const POST = auth(async function POST(req) {
       { status: 201 }
     );
   } catch (error) {
-    console.log(error);
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
-      console.log(error);
       let message = "Something wrong with your connection";
 
       if (error.code === "P1001") {
@@ -143,9 +139,7 @@ export const GET = auth(async function GET(req: any) {
       { status: 200 }
     );
   } catch (error) {
-    console.log(error);
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
-      console.log(error);
       let message = "Something wrong with your connection";
 
       if (error.code === "P1001") {
@@ -207,8 +201,6 @@ export const PUT = auth(async function POST(req: any) {
     //testing purpose
     // const authRole = "uniter" as T_Role;
 
-    console.log(authRole, "auth role");
-
     if (
       !hasPermission({
         userRole: authRole,
@@ -238,7 +230,6 @@ export const PUT = auth(async function POST(req: any) {
       { status: 200 }
     );
   } catch (err) {
-    console.error(err);
     return NextResponse.json(
       { success: false, message: "Internal Server Error" },
       { status: 500 }
@@ -296,8 +287,6 @@ export const DELETE = auth(async function DELETE(req) {
       { status: 200 }
     );
   } catch (error) {
-    console.error(error);
-
     let message = "Internal server error";
 
     if (error instanceof Prisma.PrismaClientKnownRequestError) {

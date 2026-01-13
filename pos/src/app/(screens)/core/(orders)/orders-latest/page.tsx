@@ -40,7 +40,6 @@ const OrdersLatest = () => {
     staleTime: 1000 * 60 * 5,
   });
 
-  console.log(orderMetas, "metaaaaaaaaaaaaaaaaaaaaa");
   return <OrderUI isLoading={isLoading} orderMetas={orderMetas ?? []} />;
 };
 
@@ -168,7 +167,6 @@ export const OrderUI = ({
                                   await editInvoice(invoiceData);
                                   router.push(posFrontend.pos);
                                 } catch (err) {
-                                  console.error(err);
                                 } finally {
                                   setDialogLoading(false); // hide loading after done
                                 }

@@ -19,7 +19,6 @@ const Pricing = () => {
     staleTime: 1000 * 60 * 5,
   });
 
-  console.log(pricingDue);
   const {
     data: pricingPlans,
     isLoading,
@@ -37,7 +36,6 @@ const Pricing = () => {
     staleTime: 1000 * 60 * 5,
   });
 
-  console.log(pricingPlans);
   return (
     <div className="flex flex-col">
       <div className="text-2xl font-semibold mb-3">Plan Status</div>

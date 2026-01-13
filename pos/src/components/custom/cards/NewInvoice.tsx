@@ -129,8 +129,6 @@ const NewInvoice = ({
     return total + itemTotal;
   }, 0);
 
-  console.log(data);
-  console.log(data.baseData.saleValue + (data.baseData.deliveryfee ?? 0));
   const [date, time] = formatDate(data.baseData.createdAt);
   return (
     <Card

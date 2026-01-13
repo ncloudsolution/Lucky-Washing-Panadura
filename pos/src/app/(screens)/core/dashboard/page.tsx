@@ -4,7 +4,12 @@ import { ChartPieLabel } from "@/components/custom/charts/ChartPieLabel";
 import { SelectOnSearch } from "@/components/custom/inputs/SelectOnSearch";
 import TextSkeleton from "@/components/custom/skeleton/TextSkeleton";
 import { Card } from "@/components/ui/card";
-import { IAnalytics } from "@/data";
+import {
+  ENUMPaymentMethodArray,
+  IAnalytics,
+  PaymentMethod,
+  TPaymentMethod,
+} from "@/data";
 import {
   getCacheProductsWithVariants,
   saveAllProductWithVariants,
@@ -20,7 +25,6 @@ import React, { useEffect, useState } from "react";
 
 const Dashboard = () => {
   const { data: session, status } = useSession();
-  console.log(session);
 
   const [timeFrame, setTimeFrame] = useState("All Time");
   const [branch, setBranch] = useState("All Branches");
@@ -42,7 +46,6 @@ const Dashboard = () => {
         await getCacheProductsWithVariants();
 
       if (cachedProducts.length > 0 && !expired) {
-        console.log("Cache is fresh");
         return cachedProducts;
       }
 
@@ -72,7 +75,7 @@ const Dashboard = () => {
     queryKey: ["analytics", timeFrame],
     queryFn: async () => {
       const query = timeFrame.toLocaleLowerCase().split(" ").join("");
-      console.log(query);
+
       const response = await BasicDataFetch({
         method: "GET",
         endpoint: `/api/analytics?timeframe=${query}`,
@@ -86,7 +89,7 @@ const Dashboard = () => {
 
   function getTotalValue(type: "count" | "saleValue"): number {
     const order = finalOrders.find((i) => i.branch === branch);
-    console.log(branch);
+
     if (!order) return 0; // fallback if branch not found
     return type === "count" ? order.totalCount : order.totalSaleValue;
   }
@@ -100,6 +103,53 @@ const Dashboard = () => {
 
     if (type === "collected") return totalAmount;
     return getTotalValue("saleValue") - totalAmount;
+  }
+
+  function getExpense(): number {
+    const breakdown = analytics?.expenses.find(
+      (inc) => inc.branch === branch
+    )?.breakdown;
+    const totalAmount =
+      breakdown?.reduce((sum, item) => sum + item.amount, 0) ?? 0;
+    return totalAmount;
+  }
+
+  type BreakdownItem = {
+    type: TPaymentMethod;
+    count: number;
+    amount: number;
+  };
+
+  function getAmountByType(
+    breakdown: BreakdownItem[] | undefined,
+    type: TPaymentMethod
+  ): number {
+    return breakdown?.find((b) => b.type === type)?.amount ?? 0;
+  }
+
+  function getNetCashflowBreakdown() {
+    const expenseBreakdown = analytics?.expenses.find(
+      (e) => e.branch === branch
+    )?.breakdown;
+
+    const incomeBreakdown = analytics?.incomes.find(
+      (i) => i.branch === branch
+    )?.breakdown;
+
+    return ENUMPaymentMethodArray.reduce<Record<TPaymentMethod, number>>(
+      (acc, method) => {
+        acc[method] =
+          getAmountByType(incomeBreakdown, method) -
+          getAmountByType(expenseBreakdown, method);
+        return acc;
+      },
+      {
+        Cash: 0,
+        Card: 0,
+        Bank: 0,
+        Credit: 0,
+      }
+    );
   }
 
   function getChartData() {
@@ -119,9 +169,6 @@ const Dashboard = () => {
 
     return breakdown;
   }
-
-  console.log(analytics);
-  console.log(timeFrame, "tm");
 
   const branches = analytics?.orders.map((i) => i.branch) ?? [];
   const allBranches = [
@@ -163,8 +210,6 @@ const Dashboard = () => {
         )
       : null;
 
-  console.log(allBranchesObj);
-
   const finalOrders = [
     ...(analytics?.orders ?? []),
     ...(allBranchesObj ? [allBranchesObj] : []),
@@ -187,7 +232,7 @@ const Dashboard = () => {
   return (
     // border-2 border-red-700
     <div className="flex flex-col gap-5">
-      <div className="flex gap-5 h-fit">
+      <div className="flex gap-5">
         <div className="flex flex-col gap-5">
           <div className="flex gap-5">
             <SelectOnSearch
@@ -356,6 +401,107 @@ const Dashboard = () => {
               )}
             </Card>
           </div>
+          <div className="flex w-full gap-5">
+            <Card className="shadow-special-success flex flex-1 flex-col min-h-[200px] text-muted-foreground font-semibold">
+              Collected Net Operating Cash Flow ( Rs )
+              {isLoadingProducts || isLoadingAnalytics ? (
+                <div className="flex flex-col mt-2 text-primary font-normal">
+                  {Array.from({ length: 5 }, (_, index) => (
+                    <div key={index} className="flex justify-between gap-5">
+                      <TextSkeleton
+                        length={15}
+                        type="muted"
+                        textSize="text-base"
+                      />
+                      <TextSkeleton
+                        length={5}
+                        numeric
+                        type="muted"
+                        textSize="text-base"
+                      />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex justify-around h-full">
+                  <div className="flex flex-col h-full text-primary font-normal">
+                    {analytics && analytics.incomes ? (
+                      <div className="flex flex-col w-fit h-full justify-center">
+                        <span className="text-primary text-6xl font-semibold w-fit">
+                          {new Intl.NumberFormat("en-US", {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          }).format(getIncome("collected") - getExpense())}
+                        </span>
+                        <div className="text-muted-foreground text-right">
+                          <span className="text-primary text-sm">
+                            {new Intl.NumberFormat("en-US", {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            }).format(getIncome("collected"))}
+                          </span>
+                          <span>-</span>
+                          <span className="text-primary text-sm">
+                            {new Intl.NumberFormat("en-US", {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            }).format(getExpense())}
+                          </span>
+                        </div>
+                      </div>
+                    ) : (
+                      <NoRecordsCard mini />
+                    )}
+                  </div>
+                  <div className="flex flex-col justify-center">
+                    {Object.entries(getNetCashflowBreakdown()).map(
+                      ([key, value]) => (
+                        <div
+                          key={key}
+                          className={`${
+                            value === 0
+                              ? "text-muted-foreground"
+                              : value > 0
+                              ? "text-green-700"
+                              : "text-destructive"
+                          } flex text-base justify-between gap-x-5`}
+                        >
+                          <span className="w-[50px]">{key}</span>
+                          <span>
+                            {new Intl.NumberFormat("en-US", {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            }).format(value)}
+                          </span>
+                        </div>
+                      )
+                    )}
+                  </div>
+                </div>
+              )}
+            </Card>
+            <Card className="flex items-center flex-col justify-center shadow-special-error text-muted-foreground min-w-[350px] font-semibold">
+              Expenses ( Rs )
+              {isLoadingAnalytics ? (
+                <span className="flex text-6xl">
+                  <TextSkeleton
+                    length={5}
+                    numeric
+                    type="muted"
+                    textSize="text-6xl"
+                  />
+                  .00
+                </span>
+              ) : (
+                <span className="text-primary text-6xl">
+                  {new Intl.NumberFormat("en-US", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  }).format(getExpense())}
+                </span>
+              )}
+            </Card>
+          </div>
         </div>
         <ChartPieLabel
           title="Payment Methods"
@@ -365,101 +511,6 @@ const Dashboard = () => {
           extraDataArray={analytics?.incomes}
         />
       </div>
-      {/* <Card className="flex items-center font-semibold  text-muted-foreground">
-        <div className="flex flex-col flex-1 items-center">
-          <div className="flex gap-2 items-center">
-            Account Balance
-            <span className="text-xs">( {timeFrame} )</span>
-          </div>
-
-          {isLoadingAnalytics ? (
-            <span className="flex text-7xl">
-              <TextSkeleton
-                length={5}
-                numeric
-                type="muted"
-                textSize="text-7xl"
-              />
-              .00
-            </span>
-          ) : (
-            <span className="text-primary text-7xl">
-              {new Intl.NumberFormat("en-US", {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-              }).format(
-                getTotalValue("saleValue") -
-                  Number(analytics?.stocks.stockInValue) +
-                  Number(analytics?.stocks.stockOutValue)
-              )}
-            </span>
-          )}
-        </div>
-
-        <div className="flex flex-col justify-center min-w-[300px]">
-          <span className="text-primary">Breakdown</span>
-          <div className="flex justify-between">
-            <span>Sales Revenue</span>
-            <span className="text-superbase">
-              {isLoadingAnalytics ? (
-                <TextSkeleton
-                  length={3}
-                  numeric
-                  type="muted"
-                  textSize="text-base"
-                />
-              ) : (
-                <>
-                  {new Intl.NumberFormat("en-US", {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  }).format(getTotalValue("saleValue"))}
-                </>
-              )}
-            </span>
-          </div>
-          <div className="flex justify-between">
-            <span>Cost of Purchases</span>
-            <span className="text-destructive">
-              {isLoadingAnalytics ? (
-                <TextSkeleton
-                  length={3}
-                  numeric
-                  type="muted"
-                  textSize="text-base"
-                />
-              ) : (
-                <>
-                  {new Intl.NumberFormat("en-US", {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  }).format(Number(analytics?.stocks.stockInValue))}
-                </>
-              )}
-            </span>
-          </div>
-          <div className="flex justify-between">
-            <span>Purchase Returns</span>
-            <span className="text-superbase">
-              {isLoadingAnalytics ? (
-                <TextSkeleton
-                  length={3}
-                  numeric
-                  type="muted"
-                  textSize="text-base"
-                />
-              ) : (
-                <>
-                  {new Intl.NumberFormat("en-US", {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  }).format(Number(analytics?.stocks.stockOutValue))}
-                </>
-              )}
-            </span>
-          </div>
-        </div>
-      </Card> */}
     </div>
   );
 };

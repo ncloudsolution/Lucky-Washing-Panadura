@@ -64,7 +64,6 @@ export const GET = async function GET(req: NextRequest) {
           { status: 200 }
         );
       } catch (e) {
-        console.error("Error:", e);
         return NextResponse.json(
           {
             suceess: false,
@@ -90,8 +89,6 @@ export const GET = async function GET(req: NextRequest) {
       // const limit = parseInt(searchParams.get("limit") || "20", 10);
       // const category = searchParams.get("category") || "all";
       // query DB for latest or paginated listing
-
-      console.log("hi");
 
       // const products = await prisma.productMeta.findMany({
       //   include: { variants: true },
@@ -127,7 +124,7 @@ export const GET = async function GET(req: NextRequest) {
   //       { status: 200 }
   //     );
   //   } catch (e) {
-  //     console.error("Error:", e);
+  //
   //     return NextResponse.json(
   //       {
   //         suceess: false,

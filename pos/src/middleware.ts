@@ -4,9 +4,8 @@
 
 // // This function can be marked `async` if using `await` inside
 // export async function middleware(request: NextRequest) {
-//   console.log("🔥 Middleware is running on", request.nextUrl.pathname);
+
 //   const session = await auth();
-//   console.log(session, "🔴 session in middleware");
 
 //   const authenticated = !!session?.user;
 //   if (!authenticated) return NextResponse.redirect(new URL("/", request.url));

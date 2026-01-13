@@ -86,7 +86,6 @@ const FormProductOrder: React.FC<FormProductOrderProps> = ({
   }, [selectedVariations, reset, watch]);
 
   const onSubmit = async (data: FormFields) => {
-    console.log(data, "dd");
     const enrichedData = data.variations.map((formVariation) => {
       const variationDetails = selectedVariations.find(
         (v) => v.variationId === formVariation.variationId

@@ -32,7 +32,7 @@ import { isEqual } from "lodash";
 const FormBase = ({ data }: { data: ICacheProduct }) => {
   const closeRef = React.useRef<HTMLButtonElement | null>(null);
   type FormFields = z.infer<typeof ProductBaseSchema>;
-  console.log(data, "ds");
+
   const sinhala = !!(data.searchQuery && data.name);
   const categories = data.categories.map((item) => ({ value: item }));
 
@@ -159,13 +159,12 @@ const FormBase = ({ data }: { data: ICacheProduct }) => {
     };
 
     if (isEqual(set1, set2)) {
-      console.log("no chnages");
       return setError("root", {
         message: "No changes detected. Please modify at least one field.",
       });
     }
 
-    // return console.log("returned");
+    // return
 
     try {
       const res = await BasicDataFetch({

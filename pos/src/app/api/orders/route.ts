@@ -235,7 +235,6 @@ export const POST = auth(async function POST(req: any) {
       { status: 201 }
     );
   } catch (err) {
-    console.error(err);
     return NextResponse.json(
       { success: false, message: "Check your connection and try again" },
       { status: 500 }
@@ -446,7 +445,6 @@ export const PUT = auth(async function PUT(req: any) {
       { status: 200 }
     );
   } catch (err) {
-    console.error(err);
     return NextResponse.json(
       { success: false, message: "Internal Server Error" },
       { status: 500 }
@@ -463,9 +461,6 @@ export const GET = auth(async function GET(req: any) {
 
   //testing purpose
   // const authRole = "uniter" as T_Role;
-
-  console.log(authRole, "auth role");
-  console.log(authBranch, "auth branch");
 
   let mode: string;
   if (searchParams.has("id")) mode = "id";
@@ -523,7 +518,6 @@ export const GET = auth(async function GET(req: any) {
           { status: 200 }
         );
       } catch (e) {
-        console.error("Error:", e);
         return NextResponse.json(
           {
             data: null,
@@ -557,8 +551,6 @@ export const GET = auth(async function GET(req: any) {
             id: id,
           },
         });
-
-        console.log(typeof orderMeta?.saleValue);
 
         if (!orderMeta) {
           return NextResponse.json(
@@ -595,8 +587,6 @@ export const GET = auth(async function GET(req: any) {
           where: { branch: orderOperator?.branch },
         });
 
-        console.log(bizBranchMeta, "m");
-
         const bizDetails = await prisma.businessMeta.findFirst({
           select: { businessName: true },
         });
@@ -609,8 +599,6 @@ export const GET = auth(async function GET(req: any) {
           where: { orderId: orderMeta.id },
           orderBy: { createdAt: "asc" },
         });
-
-        console.log(paymentDetails, "pay");
 
         const allVarientIds = orderItems.map((or: any) => or.productVarientId);
 
@@ -737,7 +725,6 @@ export const GET = auth(async function GET(req: any) {
           { status: 200 }
         );
       } catch (e) {
-        console.error("Error:", e);
         return NextResponse.json(
           {
             data: null,
@@ -795,7 +782,6 @@ export const GET = auth(async function GET(req: any) {
           });
         } catch (error) {
           // If BigInt conversion fails, it's not a valid number for invoiceId
-          console.log("Invalid number for invoiceId:", cleanSearch);
         }
       }
 

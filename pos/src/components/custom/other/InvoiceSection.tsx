@@ -47,8 +47,6 @@ const InvoiceSection = () => {
     enabled: !!id,
   });
 
-  console.log(invoiceData, "invoice data****************************");
-
   const contentRef = useRef<HTMLDivElement>(null);
 
   const handlePrint = useReactToPrint({
@@ -112,8 +110,6 @@ const InvoiceSection = () => {
       </SuperCenterWrapper>
     );
   }
-
-  console.log(role);
 
   return (
     <SuperCenterWrapper>

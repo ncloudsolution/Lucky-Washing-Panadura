@@ -11,8 +11,6 @@ import { PriceDropDown } from "../other/PriceDropDown";
 const CartProduct = (product: IGroupedCart) => {
   const [activeDeleteId, setActiveDeleteId] = useState<string | null>(null);
 
-  console.log(product.variations, "vari");
-
   return (
     <div className="flex w-full border-b p-3 gap-2">
       <div className="size-[52px] rounded-sm overflow-hidden shadow">

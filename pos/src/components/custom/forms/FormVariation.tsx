@@ -115,24 +115,23 @@ const FormVariation = ({
         variation: formValues.variation,
       };
 
-      // console.log("data.barcode:", data.barcode);
-      // console.log("formValues.barcode:", formValues.barcode);
-      // console.log("data.prices:", sortObjectKeys(data.prices));
-      // console.log("formValues.prices:", sortObjectKeys(formValues.prices));
-      // console.log("data.variation:", JSON.stringify(transformedVariation));
-      // console.log(
+      //
+      //
+      //
+      //
+      //
+      //
       //   "formValues.variation:",
       //   JSON.stringify(formValues.variation)
       // );
 
       if (isEqual(set1, set2)) {
-        console.log("no chnages");
         return setError("root", {
           message: "No changes detected. Please modify at least one field.",
         });
       }
 
-      // return console.log("changes detected");
+      // return
     }
 
     try {

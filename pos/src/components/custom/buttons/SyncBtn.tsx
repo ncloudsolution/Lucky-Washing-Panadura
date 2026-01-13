@@ -20,7 +20,6 @@ const SyncBtn = () => {
 
     setLoading(false);
   };
-  console.log(loading, "sync loading");
 
   return (
     <TipWrapper triggerText="Products Sync">

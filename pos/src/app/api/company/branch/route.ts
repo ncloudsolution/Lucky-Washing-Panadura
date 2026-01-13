@@ -93,7 +93,6 @@ export const POST = auth(async function POST(req: any) {
       { status: 201 }
     );
   } catch (err) {
-    console.error(err);
     return NextResponse.json(
       { success: false, message: "Internal Server Error" },
       { status: 500 }
@@ -117,7 +116,6 @@ export const GET = async function GET(req: NextRequest) {
       { status: 200 }
     );
   } catch (e) {
-    console.error("Error:", e);
     return NextResponse.json(
       {
         suceess: false,

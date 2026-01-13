@@ -37,7 +37,6 @@ export function DeleteDialog({
 
       setOpen(false); // manually close after deletion
     } catch (e) {
-      console.error("Deletion failed:", e);
     } finally {
       setLoading(false);
     }

@@ -39,9 +39,9 @@ export function ChartPieLabel({
   const chartConfig: Record<string, any> = {
     values: { label: "Values" },
   };
-  console.log(extraDataArray, "ex");
+
   return (
-    <Card className="flex flex-col">
+    <Card className="flex flex-col h-[415px]">
       <CardHeader className="items-center pb-2 relative">
         <div className="flex items-center">
           <CardTitle>{title}</CardTitle>

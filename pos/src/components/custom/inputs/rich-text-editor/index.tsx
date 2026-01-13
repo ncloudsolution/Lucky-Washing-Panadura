@@ -61,7 +61,7 @@ export default function RichTextEditor({
       },
     },
     onUpdate: ({ editor }) => {
-      // console.log(editor.getHTML());
+      //
       if (onChange) onChange(editor.getHTML());
     },
     immediatelyRender: false, // 🚀 prevents hydration mismatch

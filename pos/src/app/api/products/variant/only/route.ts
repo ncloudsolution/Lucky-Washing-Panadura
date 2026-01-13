@@ -60,7 +60,6 @@ export const POST = async function POST(req: NextRequest) {
           { status: 200 }
         );
       } catch (e) {
-        console.error("Error:", e);
         return NextResponse.json(
           {
             suceess: false,

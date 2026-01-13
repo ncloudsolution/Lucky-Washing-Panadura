@@ -15,9 +15,6 @@ export const GET = auth(async function GET(req: any) {
   // const authRole = "director" as T_Role;
   // const authBranch = "Bentota";
 
-  console.log(authRole, "auth role");
-  console.log(authBranch, "auth branch");
-
   if (!req.auth) {
     return NextResponse.json(
       {
@@ -42,7 +39,7 @@ export const GET = auth(async function GET(req: any) {
         { status: 403 }
       );
     }
-    console.log(authBranch, "auth bra");
+
     const branches = (
       await prisma.branchMeta.findMany({
         select: { branch: true },
@@ -138,6 +135,84 @@ export const GET = auth(async function GET(req: any) {
       })),
     });
 
+    //--------------income-over------------------------------
+
+    const expense = await prisma.expense.findMany({
+      where: {
+        createdAt: { gte: getDateRange(timeFrame) },
+        ...(authRole !== "director" && { branch: authBranch }),
+      },
+      select: {
+        branch: true,
+        paymentMethod: true,
+        amount: true,
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    const formattedExpense = expense
+      .filter((i) => i.branch) // remove nulls
+      .map((i) => ({
+        branch: i.branch, // ! tells TS this is definitely not null
+        paymentMethod: i.paymentMethod,
+        amount: Number(i.amount),
+      }));
+
+    const groupedByBranchExp = formattedExpense.reduce((acc, curr) => {
+      const branchName = curr.branch;
+      if (!acc[branchName]) {
+        acc[branchName] = {};
+      }
+
+      const pm = curr.paymentMethod;
+      if (!acc[branchName][pm]) {
+        acc[branchName][pm] = { count: 0, amount: 0 };
+      }
+
+      acc[branchName][pm].count += 1;
+      acc[branchName][pm].amount += curr.amount;
+
+      return acc;
+    }, {} as Record<string, Record<string, { count: number; amount: number }>>);
+
+    // Step 4: Convert to your desired array format
+    const expenseResult = Object.entries(groupedByBranchExp).map(
+      ([branch, payments]) => ({
+        branch,
+        breakdown: Object.entries(payments).map(([type, data]) => ({
+          type,
+          count: data.count,
+          amount: data.amount,
+        })),
+      })
+    );
+
+    // Step 5: Add "All Branches" summary
+    const allBranchTotalsExp: Record<
+      string,
+      { count: number; amount: number }
+    > = {};
+
+    expenseResult.forEach((branchObj) => {
+      branchObj.breakdown.forEach(({ type, count, amount }) => {
+        if (!allBranchTotals[type])
+          allBranchTotals[type] = { count: 0, amount: 0 };
+        allBranchTotals[type].count += count;
+        allBranchTotals[type].amount += amount;
+      });
+    });
+
+    expenseResult.push({
+      branch: "All Branches",
+      breakdown: Object.entries(allBranchTotalsExp).map(([type, data]) => ({
+        type,
+        count: data.count,
+        amount: data.amount,
+      })),
+    });
+
+    //--------------expense-over------------------------
+
     const initialObj: BranchSummary = {
       branch: "xx",
       totalCount: 0,
@@ -174,8 +249,6 @@ export const GET = auth(async function GET(req: any) {
       }
     }
 
-    console.log(orders, "or");
-
     const itemsWithBranch = await prisma.orderItem.findMany({
       where: {
         orderId: { in: orderIdArray },
@@ -186,8 +259,6 @@ export const GET = auth(async function GET(req: any) {
         },
       },
     });
-
-    console.log(itemsWithBranch);
 
     const grouped = itemsWithBranch.reduce((acc, item) => {
       const branch = item.order.branch;
@@ -217,8 +288,6 @@ export const GET = auth(async function GET(req: any) {
         .slice(0, 5), // top 5
     }));
 
-    console.log(top5PerBranch);
-
     const items = await prisma.orderItem.groupBy({
       by: ["productVarientId"],
       where: {
@@ -243,46 +312,11 @@ export const GET = auth(async function GET(req: any) {
     const allBranchesItems = { branch: "All Branches", items: itemsFinalArray };
     top5PerBranch.push(allBranchesItems);
 
-    // console.log(itemsFinalArray, "items");
-
-    // const stockMetas = await prisma.productStock.findMany({
-    //   where: {
-    //     ...(authRole === "manager" || authRole === "uniter"
-    //       ? { branch: authBranch }
-    //       : {}),
-
-    //     createdAt: {
-    //       gte: getDateRange(timeFrame),
-    //     },
-    //   },
-    //   orderBy: {
-    //     createdAt: "desc",
-    //   },
-    // });
-
-    // const totals = stockMetas.reduce(
-    //   (acc, item) => {
-    //     const quantity = Number(item.quantity);
-    //     const unitPrice = Number(item.unitPrice);
-    //     const discount = Number(item.discount ?? 0);
-
-    //     const value = quantity * unitPrice;
-
-    //     if (item.in) {
-    //       acc.totalIn += value - discount;
-    //     } else {
-    //       acc.totalOut += value;
-    //     }
-
-    //     return acc;
-    //   },
-    //   { totalIn: 0, totalOut: 0 }
-    // );
-
     const finalData = {
       orders: initialArray,
       products: top5PerBranch,
       incomes: incomeResult,
+      expenses: expenseResult,
       // stocks: { stockInValue: totals.totalIn, stockOutValue: totals.totalOut },
     };
 
@@ -295,7 +329,6 @@ export const GET = auth(async function GET(req: any) {
       { status: 200 }
     );
   } catch (err) {
-    console.error(err);
     return NextResponse.json(
       { success: false, message: "Internal Server Error" },
       { status: 500 }

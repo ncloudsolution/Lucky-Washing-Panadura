@@ -86,7 +86,6 @@ const CartCard = () => {
 
   useEffect(() => {
     if (invoiceData && contentRef.current) {
-      console.log(invoiceData, "data inside effect");
       setTimeout(() => {
         handlePrint();
       }, 500);
@@ -145,7 +144,6 @@ const CartCard = () => {
 
   const { data: session, status } = useSession();
   const currentCustomer = useLiveQuery(() => getCurrentCustomer(), []);
-  console.log(currentCustomer);
 
   const handlePayNow = async () => {
     const start = performance.now();
@@ -238,8 +236,6 @@ const CartCard = () => {
         data: data,
       });
 
-      console.log(res.data);
-
       const end = performance.now();
       const responseTimeMs = end - start;
 
@@ -258,12 +254,11 @@ const CartCard = () => {
         });
       } else {
         const ebillData = defaultPrint ? res.data.baseData : res.data;
-        console.log(ebillData.id, "bill id");
+
         await updateLastEbillId(ebillData.id);
         await refreshLastEbill();
 
         if (defaultPrint) {
-          console.log(res.data, "order back data");
           setInvoiceData(res.data);
           //...
         }

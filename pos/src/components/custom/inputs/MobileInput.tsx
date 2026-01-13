@@ -80,30 +80,15 @@ const MobileInput = ({
     const color = hasError
       ? "#e40f1c"
       : isButtonFocused
-        ? "#104e6a"
-        : "#E5E6EB";
-    console.log(
-      "Button border color:",
-      color,
-      "isButtonFocused:",
-      isButtonFocused,
-      "hasError:",
-      hasError
-    );
+      ? "#104e6a"
+      : "#E5E6EB";
+
     return color;
   };
 
   // Get border color for input
   const getInputBorderColor = () => {
     const color = hasError ? "#e40f1c" : isInputFocused ? "#104e6a" : "#E5E6EB";
-    console.log(
-      "Input border color:",
-      color,
-      "isInputFocused:",
-      isInputFocused,
-      "hasError:",
-      hasError
-    );
     return color;
   };
 

@@ -454,6 +454,10 @@ export interface IAnalytics {
     branch: string; // ! tells TS this is definitely not null
     breakdown: { type: TPaymentMethod; count: number; amount: number }[];
   }[];
+  expenses: {
+    branch: string; // ! tells TS this is definitely not null
+    breakdown: { type: TPaymentMethod; count: number; amount: number }[];
+  }[];
 }
 
 export interface IPieChartData {

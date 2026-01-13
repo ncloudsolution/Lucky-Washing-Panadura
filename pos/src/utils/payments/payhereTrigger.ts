@@ -51,24 +51,19 @@ export const handlePayHerePayment = async ({
     await loadPayHereScript();
 
     if (!window.payhere) {
-      console.error("PayHere script is not available.");
       return;
     }
 
     // ✅ Register event handlers BEFORE starting payment
     window.payhere.onCompleted = function (orderId: string) {
-      console.log("Payment Completed. Redirecting...");
       window.location.href = `${BaseUrl}`; // ✅ Redirect manually
     };
 
     window.payhere.onDismissed = function () {
-      console.log("Payment Dismissed");
       window.location.href = `${BaseUrl}login`;
     };
 
-    window.payhere.onError = function (error: string) {
-      console.error("Payment Error:", error);
-    };
+    window.payhere.onError = function (error: string) {};
 
     // Request secure hash from the backend
     const response = await fetch("/api/payments/payhere/hash", {
@@ -83,7 +78,6 @@ export const handlePayHerePayment = async ({
 
     const { hash, merchant_id } = await response.json();
     if (!hash || !merchant_id) {
-      console.error("Failed to get hash from backend");
       return;
     }
 
@@ -113,7 +107,5 @@ export const handlePayHerePayment = async ({
     };
 
     window.payhere.startPayment(payment);
-  } catch (error) {
-    console.error("Error initializing PayHere:", error);
-  }
+  } catch (error) {}
 };

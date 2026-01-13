@@ -40,8 +40,6 @@ const Customer = () => {
     staleTime: 1000 * 60 * 5,
   });
 
-  console.log(customers);
-
   // Handle settled state with useEffect
   React.useEffect(() => {
     if (!isLoading && hasSearched) {
@@ -103,7 +101,6 @@ const Customer = () => {
           <div className="flex flex-col h-full justify-between gap-2 ">
             <div className="flex flex-col gap-2 flex-1">
               {finalArray.map((cus, index) => {
-                console.log(cus.createdAt);
                 const createdAt = cus.createdAt
                   ? new Date(cus.createdAt)
                   : null;

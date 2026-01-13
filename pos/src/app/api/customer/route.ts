@@ -48,7 +48,6 @@ export const GET = async function GET(req: NextRequest) {
           { status: 200 }
         );
       } catch (e) {
-        console.error("Error:", e);
         return NextResponse.json(
           {
             suceess: false,
@@ -73,7 +72,7 @@ export const GET = async function GET(req: NextRequest) {
       const customers = await prisma.customerMeta.findMany({
         orderBy: { createdAt: "desc" },
       });
-      console.log("ji");
+
       return NextResponse.json(
         {
           success: true,
@@ -119,8 +118,6 @@ export const POST = auth(async function POST(req: any) {
     //testing purpose
     // const authRole = "uniter" as T_Role;
 
-    console.log(authRole, "auth role");
-
     if (
       !hasPermission({
         userRole: authRole,
@@ -158,7 +155,6 @@ export const POST = auth(async function POST(req: any) {
       { status: 201 }
     );
   } catch (err) {
-    console.error(err);
     return NextResponse.json(
       { success: false, message: "Internal Server Error" },
       { status: 500 }
@@ -247,8 +243,6 @@ export const DELETE = auth(async function DELETE(req) {
       { status: 200 }
     );
   } catch (error) {
-    console.error(error);
-
     let message = "Internal server error";
 
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
@@ -337,7 +331,6 @@ export const PUT = auth(async function PUT(req: any) {
       { status: 200 }
     );
   } catch (err) {
-    console.error(err);
     return NextResponse.json(
       { success: false, message: "Internal Server Error" },
       { status: 500 }

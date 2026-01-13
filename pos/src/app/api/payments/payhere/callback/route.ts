@@ -79,7 +79,6 @@ export async function POST(req: NextRequest) {
       { status: 200 }
     );
   } catch (error) {
-    console.error("Error processing payment notification:", error);
     return NextResponse.json(
       { message: "Internal Server Error" },
       { status: 500 }

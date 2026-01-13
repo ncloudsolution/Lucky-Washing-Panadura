@@ -141,7 +141,7 @@ const FormTempMaxTransfer = ({ data }: { data: IProductVariant }) => {
     formState: { isSubmitting, errors },
   } = formMethods;
 
-  // console.log("Form Errors:", errors);
+  //
 
   const complexProduct = watch("complex");
   const sinhalaModeValue = watch("sinhalaMode");
@@ -198,10 +198,7 @@ const FormTempMaxTransfer = ({ data }: { data: IProductVariant }) => {
         );
 
         modifiedData = { ...data, images: uploadedImageUrl };
-        console.log("chek im------------------------------------");
       }
-
-      console.log(uploadedImageUrl, "Up");
 
       const res = await BasicDataFetch({
         // Added await here
@@ -281,7 +278,6 @@ const FormTempMaxTransfer = ({ data }: { data: IProductVariant }) => {
   ];
 
   const [step, setStep] = useState(1);
-  console.log(step);
 
   const handleNext = async (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();

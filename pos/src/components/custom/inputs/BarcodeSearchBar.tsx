@@ -45,7 +45,7 @@ const BarcodeSearchBar = ({
 
   const handleDirectSubmit = async (product: any) => {
     const singleVariation = product.varients[0];
-    console.log(singleVariation, "var name");
+
     const formData = {
       variations: [
         {
@@ -60,15 +60,11 @@ const BarcodeSearchBar = ({
       ],
     };
 
-    console.log(formData.variations, "var");
-
     await addtoCacheCart(formData.variations);
   };
 
   const handleSearchTyping = async (query: string) => {
     const { products } = await getCacheProductsWithVariants();
-
-    console.log(query, "query");
 
     if (!query.trim()) {
       onSearch?.(products);
@@ -85,8 +81,6 @@ const BarcodeSearchBar = ({
 
       return nameMatch || searchQueryMatch;
     });
-
-    console.log(filteredProducts, "filterd");
 
     onSearch?.(filteredProducts);
   };
@@ -127,7 +121,6 @@ const BarcodeSearchBar = ({
       (pro: ICacheProduct) => pro.id === prod.id
     );
 
-    console.log(filteredProduct);
     return onSearch?.(filteredProduct);
   };
 

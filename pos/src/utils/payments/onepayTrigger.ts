@@ -70,9 +70,6 @@ export const handleOnePayPayment = async ({
       gateway: { redirect_url: gatewayUrl },
     } = responseJson.data;
 
-    console.log(transactionId, "transid");
-    console.log(gatewayUrl, "gatewayurl");
-
     return { transactionId, gatewayUrl };
 
     // // Create the iframe container if not exists
@@ -98,7 +95,6 @@ export const handleOnePayPayment = async ({
     // // Append the iframe to the container
     // iframeContainer.appendChild(iframe);
   } catch (error) {
-    console.error("Error initializing OnePay:", error);
     return { transactionId: "", gatewayUrl: "" };
   }
 };

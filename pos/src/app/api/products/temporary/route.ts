@@ -45,8 +45,6 @@ export const POST = auth(async function POST(req: any) {
     //testing purpose
     // const authRole = "uniter" as T_Role;
 
-    console.log(authRole, "auth role");
-
     if (
       !hasPermission({
         userRole: authRole,
@@ -149,7 +147,6 @@ export const POST = auth(async function POST(req: any) {
       { status: 201 }
     );
   } catch (err) {
-    console.error(err);
     return NextResponse.json(
       {
         success: false,
@@ -181,8 +178,6 @@ export const PUT = auth(async function POST(req: any) {
   //testing purpose
   // const authRole = "uniter" as T_Role;
 
-  console.log(authRole, "auth role");
-
   if (
     !hasPermission({
       userRole: authRole,
@@ -200,7 +195,7 @@ export const PUT = auth(async function POST(req: any) {
     switch (type) {
       case "min": {
         const data: { metaId: string; varientId: string } = await req.json();
-        console.log(data);
+
         // Backend validation
         const { validationStatus, validationResponse } = backendDataValidation({
           schema: MiniTempTransferSchema,
@@ -328,7 +323,6 @@ export const PUT = auth(async function POST(req: any) {
       }
     }
   } catch (err) {
-    console.error(err);
     return NextResponse.json(
       { success: false, message: "Internal Server Error" },
       { status: 500 }

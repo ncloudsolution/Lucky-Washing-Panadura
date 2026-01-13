@@ -36,7 +36,7 @@ const FormProductPrice = ({
 }) => {
   const closeRef = React.useRef<HTMLButtonElement | null>(null);
   type FormFields = z.infer<typeof ProductVariantSchema>;
-  console.log(nextSetNo, "nextno");
+
   const formMethods = useForm<FormFields>({
     resolver: zodResolver(ProductVariantSchema),
     defaultValues: {
