@@ -151,10 +151,10 @@ export const POST = auth(async function POST(req: any) {
         { status: 409 }
       );
     }
-    await prisma.customerMeta.create({ data: data });
+    const cus = await prisma.customerMeta.create({ data: data });
 
     return NextResponse.json(
-      { success: true, message: "Customer created successfully" },
+      { success: true, message: "Customer created successfully", data: cus.id },
       { status: 201 }
     );
   } catch (err) {

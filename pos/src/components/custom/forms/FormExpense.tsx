@@ -123,7 +123,7 @@ const FormExpense = ({
           const newData: IExpense = {
             ...formValues, // 👈 use API response if available
             amount: Number(formValues.amount),
-            id: `x-${Date.now()}`,
+            id: res.data,
             createdAt: new Date(),
           };
 

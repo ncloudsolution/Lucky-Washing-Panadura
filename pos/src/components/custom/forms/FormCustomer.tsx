@@ -98,7 +98,7 @@ const FormCustomer = ({
 
           const newData: ICustomer = {
             ...formValues, // 👈 use API response if available
-            id: `x-${Date.now()}`,
+            id: res.data,
             createdAt: new Date(),
           };
 

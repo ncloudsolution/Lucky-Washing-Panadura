@@ -54,7 +54,7 @@ export const POST = auth(async function POST(req) {
 
   //need here the auth check ###############################
   try {
-    await prisma.expense.create({
+    const exp = await prisma.expense.create({
       data: modData,
     });
 
@@ -62,7 +62,7 @@ export const POST = auth(async function POST(req) {
       {
         success: true,
         message: `Expense recorded successsfully`,
-        data: null,
+        data: exp.id,
       },
       { status: 201 }
     );

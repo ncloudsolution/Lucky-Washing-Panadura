@@ -1,4 +1,5 @@
 "use client";
+import { BasicHoverCard } from "@/components/custom/cards/BasicHoverCard";
 import NoRecordsCard from "@/components/custom/cards/NoRecordsCard";
 import { AddNewDialog } from "@/components/custom/dialogs/AddNewDialog";
 import { DeleteDialog } from "@/components/custom/dialogs/DeleteDialog";
@@ -13,7 +14,7 @@ import {
 } from "@/data/dbcache";
 import { BasicDataFetch, formatDate } from "@/utils/common";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Pencil } from "lucide-react";
+import { NotepadText, Pencil } from "lucide-react";
 import { useSession } from "next-auth/react";
 import React, { useState } from "react";
 import { toast } from "sonner";
@@ -132,9 +133,26 @@ const Expenses = () => {
                 return (
                   <div
                     key={index}
-                    className={` flex justify-between items-center gap-5 py-3 px-4 group hover:bg-muted bg-background shadow rounded-md border border-transparent hover:border-gray-400`}
+                    className={`flex justify-between items-center gap-5 py-3 px-4 group hover:bg-muted bg-background shadow rounded-md border border-transparent hover:border-gray-400`}
                   >
-                    <div className="flex-1">{ex.category}</div>
+                    <div className="flex gap-2 flex-1">
+                      <>
+                        <div
+                          className={`${
+                            ex.remarks
+                              ? "bg-superbase text-white hover:cursor-pointer"
+                              : "bg-input pointer-events-none"
+                          } size-[25px] rounded-full flex justify-center items-center`}
+                        >
+                          <BasicHoverCard
+                            title="Remarks"
+                            description={ex.remarks}
+                            triggerBtn={<NotepadText className="size-[14px]" />}
+                          />
+                        </div>
+                      </>
+                      {ex.category}
+                    </div>
                     <div className="flex-1 text-center">
                       {" "}
                       {new Intl.NumberFormat("en-US", {
