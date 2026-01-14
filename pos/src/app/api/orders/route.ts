@@ -781,6 +781,13 @@ export const GET = auth(async function GET(req: any) {
           orderMetas = await prisma.orderMeta.findMany({
             where: { invoiceId: invoiceId },
             orderBy: { createdAt: "desc" },
+            include: {
+              incomes: {
+                select: {
+                  amount: true,
+                },
+              },
+            },
           });
         } catch (error) {
           // If BigInt conversion fails, it's not a valid number for invoiceId
@@ -816,15 +823,34 @@ export const GET = auth(async function GET(req: any) {
           orderMetas = await prisma.orderMeta.findMany({
             where: { customerId: customer.id },
             orderBy: { createdAt: "desc" },
+            include: {
+              incomes: {
+                select: {
+                  amount: true,
+                },
+              },
+            },
           });
         }
       }
+
+      const ordersWithIncomeSum = orderMetas.map((order) => {
+        const totalIncome = order.incomes.reduce(
+          (sum, inc) => sum + Number(inc.amount),
+          0
+        );
+
+        return {
+          ...order,
+          paymentAmount: totalIncome,
+        };
+      });
 
       return NextResponse.json(
         {
           success: true,
           message: "Order history fetch successfully!",
-          data: orderMetas,
+          data: ordersWithIncomeSum,
         },
         { status: 200 }
       );
@@ -859,21 +885,40 @@ export const GET = auth(async function GET(req: any) {
       const orderMetas = await prisma.orderMeta.findMany({
         where:
           authRole === "cashier"
-            ? { operator: authId } // 👈 only show their own orders
+            ? { operator: authId }
             : authRole === "manager"
             ? { branch: authBranch }
-            : {}, // 👈 for other roles, no filter
+            : {},
         orderBy: {
           createdAt: "desc",
         },
         take: 10,
+        include: {
+          incomes: {
+            select: {
+              amount: true,
+            },
+          },
+        },
+      });
+
+      const ordersWithIncomeSum = orderMetas.map((order) => {
+        const totalIncome = order.incomes.reduce(
+          (sum, inc) => sum + Number(inc.amount),
+          0
+        );
+
+        return {
+          ...order,
+          paymentAmount: totalIncome,
+        };
       });
 
       return NextResponse.json(
         {
           success: true,
           message: "Recent orders fetch successfully!",
-          data: orderMetas,
+          data: ordersWithIncomeSum,
         },
         { status: 200 }
       );

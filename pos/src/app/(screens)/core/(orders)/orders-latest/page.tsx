@@ -110,6 +110,15 @@ export const OrderUI = ({
 
                   const [date, time] = formatDate(createdAt.toLocaleString());
 
+                  function DueAmount() {
+                    const x =
+                      Number(or?.saleValue ?? 0) +
+                      Number(or.deliveryfee ?? 0) -
+                      Number(or.paymentAmount ?? 0);
+
+                    return x;
+                  }
+
                   return (
                     <div
                       key={index}
@@ -137,12 +146,12 @@ export const OrderUI = ({
                         <>
                           <div
                             className={`${
-                              or.deliveryfee
-                                ? "bg-input text-primary"
-                                : "bg-superbase text-white"
-                            } size-[25px] rounded-full flex justify-center items-center`}
+                              DueAmount() === 0
+                                ? "bg-superbase"
+                                : "bg-destructive text-primary"
+                            } size-[25px] rounded-full flex justify-center items-center text-white`}
                           >
-                            {or.deliveryfee ? (
+                            {DueAmount() === 0 ? (
                               <BadgeCheck className="size-[14px]" />
                             ) : (
                               <Coins className="size-[14px]" />

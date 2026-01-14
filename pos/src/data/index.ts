@@ -340,6 +340,7 @@ export interface IOrderMeta {
   additionalMobile?: string | null;
   customerIp?: string | null;
   operator: string;
+  paymentAmount: number;
 }
 
 export interface IOrderItem {
