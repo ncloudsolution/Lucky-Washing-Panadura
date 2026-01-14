@@ -100,7 +100,7 @@ export const IncomeSchema = (due: number) =>
         z.number().gt(0, { message: "Amount must be greater than 0" }),
         z.string().nonempty({ message: "Amount is required" }),
       ])
-      .refine((val) => Number(val) < due, {
+      .refine((val) => Number(val) <= due, {
         message: "Amount cannot exceed the due amount",
       }),
   });
