@@ -17,7 +17,15 @@ import { posFrontend } from "@/data/frontendRoutes";
 import { BasicDataFetch, formatDate } from "@/utils/common";
 import { AlertDialogAction } from "@radix-ui/react-alert-dialog";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Home, MapPin, Pencil, Repeat } from "lucide-react";
+import {
+  BadgeCheck,
+  Coins,
+  HandCoins,
+  Home,
+  MapPin,
+  Pencil,
+  Repeat,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import React from "react";
 
@@ -81,6 +89,7 @@ export const OrderUI = ({
     },
   });
   const [dialogLoading, setDialogLoading] = React.useState(false);
+
   return (
     <>
       <HeaderLabel />
@@ -124,7 +133,22 @@ export const OrderUI = ({
                       </div>
                       <div className="flex-1 text-center">{or.branch}</div>
                       <div className="flex-1 text-center">{or.status}</div>
-                      <div className="flex-1 text-center font-medium">
+                      <div className="flex flex-1 justify-center items-center font-medium gap-2">
+                        <>
+                          <div
+                            className={`${
+                              or.deliveryfee
+                                ? "bg-input text-primary"
+                                : "bg-superbase text-white"
+                            } size-[25px] rounded-full flex justify-center items-center`}
+                          >
+                            {or.deliveryfee ? (
+                              <BadgeCheck className="size-[14px]" />
+                            ) : (
+                              <Coins className="size-[14px]" />
+                            )}
+                          </div>
+                        </>
                         {new Intl.NumberFormat("en-US", {
                           minimumFractionDigits: 2,
                           maximumFractionDigits: 2,

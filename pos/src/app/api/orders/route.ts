@@ -489,6 +489,8 @@ export const GET = auth(async function GET(req: any) {
             orderId: id,
           },
           select: {
+            id: true,
+            orderId: true,
             amount: true,
             paymentMethod: true,
             category: true,

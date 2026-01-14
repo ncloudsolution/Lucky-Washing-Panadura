@@ -86,3 +86,21 @@ export const ExpenseSchema = z.object({
   ]),
   remarks: z.string().max(1000, "Must be less than 1000 charactors"),
 });
+
+export const IncomeSchema = (due: number) =>
+  z.object({
+    id: z.string().nullable().optional(),
+    orderId: z.string().nonempty({ message: "Order Id is required" }),
+    category: z.string().nonempty({ message: "Category is required" }),
+    paymentMethod: z.enum(ENUMPaymentMethodArray, {
+      error: () => ({ message: "Payment method is required" }),
+    }),
+    amount: z
+      .union([
+        z.number().gt(0, { message: "Amount must be greater than 0" }),
+        z.string().nonempty({ message: "Amount is required" }),
+      ])
+      .refine((val) => Number(val) < due, {
+        message: "Amount cannot exceed the due amount",
+      }),
+  });

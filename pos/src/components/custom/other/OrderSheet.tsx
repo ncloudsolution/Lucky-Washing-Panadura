@@ -10,8 +10,8 @@ import {
 } from "@/components/ui/sheet";
 import { useRef, useState } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { List } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { Coins, List, NotepadText, Pencil } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useReactToPrint } from "react-to-print";
@@ -19,10 +19,20 @@ import { BasicDataFetch, formatDate } from "@/utils/common";
 import OrderSheetSkeleton from "../skeleton/OrderSheetSkeleton";
 import NewInvoice from "../cards/NewInvoice";
 import { TPaymentMethod } from "@/data";
+import FormIncome, { IIncome } from "../forms/FormIncome";
+import { AddNewDialog } from "../dialogs/AddNewDialog";
+import ViewAccessChecker from "./AccessChecker";
+import { useSession } from "next-auth/react";
+import { DeleteDialog } from "../dialogs/DeleteDialog";
+import { toast } from "sonner";
+import { BasicHoverCard } from "../cards/BasicHoverCard";
 
 export function OrderSheet({ id }: { id: string }) {
   const [open, setOpen] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
+
+  const { data: session, status } = useSession();
+  const role = session?.user.role.toLowerCase();
 
   const handlePrint = useReactToPrint({
     contentRef,
@@ -42,6 +52,15 @@ export function OrderSheet({ id }: { id: string }) {
     enabled: !!id && open,
   });
 
+  function DueAmount() {
+    const x =
+      Number(invoiceData?.baseData?.saleValue ?? 0) +
+      Number(invoiceData?.baseData?.deliveryfee ?? 0) -
+      Number(invoiceData?.baseData?.paymentAmount ?? 0);
+
+    return x;
+  }
+
   const { data: paymentBreakdown = [], isLoading: isLoadingPaymentBreakdown } =
     useQuery({
       queryKey: ["order-payment-breakdown", id],
@@ -52,6 +71,8 @@ export function OrderSheet({ id }: { id: string }) {
         }),
       select: (response) =>
         response?.data as {
+          id: string;
+          orderId: string;
           amount: number;
           paymentMethod: TPaymentMethod;
           category: string;
@@ -60,6 +81,10 @@ export function OrderSheet({ id }: { id: string }) {
       staleTime: 1000 * 60 * 5,
       enabled: !!id && open,
     });
+
+  const queryClient = useQueryClient();
+
+  console.log(session?.user.role);
 
   const [date, time] = formatDate(invoiceData?.baseData.customerCreatedAt);
   return (
@@ -113,7 +138,7 @@ export function OrderSheet({ id }: { id: string }) {
             <SheetTitle className="text-[18px] flex flex-col border-b pb-1 mt-4">
               Payment History
             </SheetTitle>
-            <div className="flex flex-col w-full text-sm mt-2">
+            <div className="flex flex-col w-full text-sm mt-2 gap-1">
               {paymentBreakdown.map((pay, index) => {
                 if (!pay?.createdAt) return null;
 
@@ -132,13 +157,101 @@ export function OrderSheet({ id }: { id: string }) {
                       </div>
                     </div>
 
-                    {new Intl.NumberFormat("en-US", {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    }).format(pay.amount)}
+                    <div className="flex gap-2 items-center">
+                      {new Intl.NumberFormat("en-US", {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      }).format(pay.amount)}
+                      {index === 0 ? (
+                        <div
+                          className={`
+                          } size-[25px] rounded-sm flex justify-center items-center bg-input`}
+                        >
+                          <BasicHoverCard
+                            title="Note"
+                            description={
+                              "Initial payment changes can only adjust with the order edit section"
+                            }
+                            triggerBtn={<NotepadText className="size-[18px]" />}
+                          />
+                        </div>
+                      ) : (
+                        <ViewAccessChecker
+                          permission="create:order"
+                          userRole={role}
+                          component={
+                            <DeleteDialog
+                              mini
+                              triggerText="Delete Payment"
+                              data={`Affected payment : ${pay.id}`}
+                              onClick={async () => {
+                                try {
+                                  const res = await BasicDataFetch({
+                                    method: "DELETE",
+                                    endpoint: "/api/company/income",
+                                    data: { id: pay.id },
+                                  });
+
+                                  queryClient.setQueryData(
+                                    ["order-payment-breakdown", pay.orderId],
+                                    (oldData: any) => {
+                                      const oldArray: IIncome[] =
+                                        oldData?.data ?? [];
+
+                                      const filterd = oldArray.filter(
+                                        (i) => i.id !== pay.id
+                                      );
+
+                                      return {
+                                        ...oldData,
+                                        data: filterd,
+                                      };
+                                    }
+                                  );
+
+                                  toast.success(res.message);
+                                } catch (err) {
+                                  const errorMessage =
+                                    err instanceof Error
+                                      ? err.message
+                                      : "An error occurred";
+                                  toast.error(errorMessage);
+                                }
+                              }}
+                            />
+                          }
+                          skeleton={
+                            <Skeleton className="size-[25px] rounded-sm bg-gray-300 border-slate-400" />
+                          }
+                        />
+                      )}
+                    </div>
                   </div>
                 );
               })}
+
+              {DueAmount() > 0 && (
+                <ViewAccessChecker
+                  permission="create:order"
+                  userRole={role}
+                  component={
+                    <AddNewDialog
+                      form={<FormIncome due={DueAmount()} orderId={id} />}
+                      triggerText="New Payment"
+                      mini
+                      triggerBtn={
+                        <Button className="w-full rounded-sm xs:text-base text-xs mt-2 bg-superbase/90 hover:bg-superbase">
+                          <Coins className="xs:size-[18px] size-[14px]" />
+                          New Payment
+                        </Button>
+                      }
+                    />
+                  }
+                  skeleton={
+                    <Skeleton className="size-[25px] rounded-sm bg-gray-300 border-slate-400" />
+                  }
+                />
+              )}
             </div>
 
             <SheetTitle className="text-[20px] flex flex-col py-4">
