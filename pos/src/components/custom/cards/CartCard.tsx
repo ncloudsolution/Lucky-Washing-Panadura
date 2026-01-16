@@ -19,12 +19,16 @@ import {
   clearCurrentCustomer,
   clientPrimaryKey,
   clientReset,
+  ensureBranchesInit,
   ensureBusinessInit,
   ensureClientInit,
+  getBranchesMeta,
+  getBusinessMeta,
   getCurrentCustomer,
   getExportReadyCacheCart,
   getLastEbillId,
   getOrderType,
+  getReverseExportFormat,
   getTotalFromCacheCart,
   removeAllFromCacheCart,
   setClientEditMode,
@@ -50,6 +54,8 @@ import {
   defaultPrint,
   globalDefaultCustomer,
   IOrderMeta,
+  TOrderStatus,
+  TPaymentMethod,
 } from "@/data";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { TipWrapper } from "../wrapper/TipWrapper";
@@ -61,14 +67,14 @@ const CartCard = () => {
   const queryClient = useQueryClient();
   const products = useLiveQuery(() => cachedb.cartItem.toArray(), []);
   const structuredProducts = transformCartData(products ?? []);
-  const [activeOption, setActiveOption] = useState("Cash");
+  const [activeOption, setActiveOption] = useState<TPaymentMethod>("Cash");
   const [paymentPortion, setPaymentPortion] = useState("Full Payment");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [invoiceData, setInvoiceData] = useState<IInvoice>();
 
-  /* ----------------------Next InvoiceId ------------------------*/
-
   const { data: session, status } = useSession();
+
+  /* ----------------------Next InvoiceId ------------------------*/
 
   const { data: nextInvoiceIdSuffix, isLoading } = useQuery({
     queryKey: ["next-invoice-id"],
@@ -103,7 +109,49 @@ const CartCard = () => {
     staleTime: 1000 * 60 * 5,
     enabled: !!session?.user.id,
   });
+  const finalNextInvoiceId: string =
+    session?.user.counterNo + nextInvoiceIdSuffix;
   console.log(nextInvoiceIdSuffix);
+
+  useEffect(() => {
+    async function Cli() {
+      const companyMetaCli = await ensureBusinessInit();
+      const allBranchesCli = await ensureBranchesInit();
+      const branchDetails = allBranchesCli.find(
+        (i) => i.branch === session?.user.branch
+      );
+
+      const data = {
+        id: "x",
+        invoiceId: finalNextInvoiceId,
+        createdAt: Date.now(),
+        saleValue: total,
+        deliveryfee: deliveryfee,
+        status: "Processing",
+
+        paymentMethod: activeOption,
+        incomeCategory: paymentPortion,
+        paymentAmount:
+          paymentPortion === "Advance Payment" ||
+          paymentPortion === "Credit Payment"
+            ? paymentPortionAmount
+            : total + deliveryfee,
+
+        business: companyMetaCli.businessName,
+        branch: session?.user.branch,
+        address: branchDetails?.address,
+        hotlines: branchDetails?.hotlines,
+        operator: session?.user.id,
+        counterNo: session?.user.counterNo,
+
+        //this data get only for sheet not the invoice
+        customer: "x",
+        customerMobile: "x",
+        customerCreatedAt: Date.now(),
+      };
+    }
+  });
+
   const orderType = useLiveQuery(async () => {
     return getOrderType();
   }, []);
@@ -241,8 +289,6 @@ const CartCard = () => {
       return toast.error("No products in cart to order");
     }
 
-    const finalNextInvoiceId = session?.user.counterNo + nextInvoiceIdSuffix;
-
     const data = {
       customerMobile: currentCustomer?.mobile,
       orderMeta: {
@@ -270,13 +316,55 @@ const CartCard = () => {
       //customerId, -- should include --loop through id from mobile
     };
 
+    //full clent side billing data process start ----------------------
+    const revItems = await getReverseExportFormat();
+    const companyMetaCli = await getBusinessMeta();
+    const allBranchesCli = await getBranchesMeta();
+    const branchDetails = allBranchesCli.find(
+      (i) => i.branch === session?.user.branch
+    );
+
+    const dataCli = {
+      baseData: {
+        id: "x",
+        invoiceId: finalNextInvoiceId,
+        createdAt: new Date().toISOString(),
+        saleValue: total,
+        deliveryfee: deliveryfee,
+        status: "Processing" as TOrderStatus,
+
+        paymentMethod: activeOption,
+        incomeCategory: paymentPortion,
+        paymentAmount:
+          paymentPortion === "Advance Payment" ||
+          paymentPortion === "Credit Payment"
+            ? paymentPortionAmount
+            : total + deliveryfee,
+
+        business: companyMetaCli?.businessName as string,
+        branch: session?.user.branch,
+        address: branchDetails?.address as string,
+        hotlines: branchDetails?.hotlines as string[],
+        operator: session?.user.id,
+        counterNo: session?.user.counterNo,
+
+        //this data get only for sheet not the invoice
+        customer: "x",
+        customerMobile: "x",
+        customerCreatedAt: new Date().toISOString(),
+      },
+      items: revItems,
+    };
+
+    // full clent side billing data process end ------------------------
+
     try {
-      const res = await BasicDataFetch({
-        // Added await here
-        method: orderType?.editMode ? "PUT" : "POST",
-        endpoint: "/api/orders",
-        data: data,
-      });
+      // const res = await BasicDataFetch({
+      //   // Added await here
+      //   method: orderType?.editMode ? "PUT" : "POST",
+      //   endpoint: "/api/orders",
+      //   data: data,
+      // });
 
       const end = performance.now();
       const responseTimeMs = end - start;
@@ -305,13 +393,17 @@ const CartCard = () => {
         //update state of nextid
         queryClient.setQueryData(["next-invoice-id"], finalNext);
 
-        const ebillData = defaultPrint ? res.data.baseData : res.data;
+        //  const ebillData = defaultPrint ? dataCli.baseData : dataCli;
+        // const ebillData = defaultPrint ? res.data.baseData : res.data;
+        // await updateLastEbillId(ebillData.id);
 
-        await updateLastEbillId(ebillData.id);
+        const ebillId = dataCli.baseData.id;
+        await updateLastEbillId(ebillId);
+
         await refreshLastEbill();
 
         if (defaultPrint) {
-          setInvoiceData(res.data);
+          setInvoiceData(dataCli);
           //...
         }
 
@@ -329,7 +421,9 @@ const CartCard = () => {
       // setPaymentPortion("Full Payment");
       // setPaymentPortionAmount(0);
       // res already contains parsed JSON from BasicDataFetch
-      toast.success(`${res.message} in ${(responseTimeMs / 1000).toFixed(2)}s`);
+
+      // toast.success(`${res.message} in ${(responseTimeMs / 1000).toFixed(2)}s`);
+      toast.success(`Order filled in ${(responseTimeMs / 1000).toFixed(2)}s`);
 
       playMusic("/sounds/paid.mp3");
     } catch (err) {
@@ -402,7 +496,8 @@ const CartCard = () => {
           {payOptions.map((opt, index) => (
             <Button
               onClick={() => {
-                if (activeOption !== opt.name) setActiveOption(opt.name);
+                if (activeOption !== opt.name)
+                  setActiveOption(opt.name as TPaymentMethod);
                 if (opt.name === "Credit") {
                   setPaymentPortionAmount(0);
                   setPaymentPortion("Credit Payment");

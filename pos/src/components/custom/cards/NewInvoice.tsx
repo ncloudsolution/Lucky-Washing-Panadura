@@ -13,13 +13,13 @@ import { singlishToUnicode } from "sinhala-unicode-coverter";
 export interface IInvoice {
   baseData: {
     id: string;
-    invoiceId: number;
+    invoiceId: string;
     createdAt: string;
     saleValue: number;
     deliveryfee: number | null;
     paymentMethod: TPaymentMethod;
     paymentAmount: number;
-    incomeCategory: number;
+    incomeCategory: string;
     status: TOrderStatus;
     business: string;
     branch: string;

@@ -17,6 +17,7 @@ export const POST = auth(async function POST(req: any) {
   try {
     const data = await req.json();
     const orderItems = data.orderItems;
+    console.log(orderItems);
 
     /* ---------------- Validation ---------------- */
     if (!orderItems || orderItems.length === 0) {

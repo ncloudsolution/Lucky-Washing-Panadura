@@ -15,6 +15,7 @@ import {
   cachedb,
   clientPrimaryKey,
   ensureBusinessInit,
+  ensureBranchesInit,
 } from "@/data/dbcache";
 
 import NoRecordsCard from "@/components/custom/cards/NoRecordsCard";
@@ -38,6 +39,12 @@ function PosWindow() {
       queryKey: ["categories"],
       queryFn: async () => {
         await ensureClientInit();
+
+        async function initX() {
+          await ensureBusinessInit();
+          await ensureBranchesInit();
+        }
+        initX();
 
         // 1️⃣ Try cache
         const meta = await getBusinessMeta();

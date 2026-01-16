@@ -851,6 +851,53 @@ export async function getExportReadyCacheCart() {
   }));
 }
 
+export async function getReverseExportFormat() {
+  // Step 1: get cart items
+  const cartItems = await getExportReadyCacheCart();
+
+  // Step 2: get all metas & variations (cached, fast)
+  const productMetas = await cachedb.productMeta.toArray();
+  const productVariations = await cachedb.productVarient.toArray();
+
+  // Step 3: build lookup maps
+  const variationMap = new Map(productVariations.map((v) => [v.id, v]));
+
+  const metaMap = new Map(productMetas.map((m) => [m.id, m]));
+
+  // Step 4: group by productMeta
+  const resultMap = new Map<string, any>();
+
+  for (const item of cartItems) {
+    const variation = variationMap.get(item.productVarientId);
+    if (!variation) continue;
+
+    const meta = metaMap.get(variation.metaId);
+    if (!meta) continue;
+
+    // create meta group if not exists
+    if (!resultMap.has(meta.id as string)) {
+      resultMap.set(meta.id as string, {
+        metaId: meta.id,
+        name: meta.name,
+        metric: meta.metric ?? "None",
+        variations: [],
+      });
+    }
+
+    resultMap.get(meta.id as string).variations.push({
+      id: variation.id,
+      variation: variation.variation ?? null,
+      // regularPrice: variation.prices[0].reg,
+      regularPrice: variation.prices.find((i) => i.sel === item.unitPrice)?.reg,
+      sellingPrice: item.unitPrice,
+      quantity: item.quantity,
+    });
+  }
+
+  // Step 5: return as array
+  return Array.from(resultMap.values());
+}
+
 export async function getLastEbillId() {
   const client = await cachedb.client.get(clientPrimaryKey);
   return client?.lastOrderId;
