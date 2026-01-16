@@ -5,6 +5,7 @@ declare module "next-auth" {
     id: string;
     role: string; // ✅ add role to the User types
     branch: string;
+    counterNo: string | null;
   }
 }
 
@@ -14,6 +15,7 @@ declare module "next-auth" {
       id: string;
       role: string;
       branch: string;
+      counterNo: string | null;
     };
   }
 }

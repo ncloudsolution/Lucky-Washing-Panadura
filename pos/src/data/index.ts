@@ -3,8 +3,10 @@ import { Prisma } from "@prisma/client";
 import { BankDetailsCard } from "@/components/custom/cards/BankDetailsCard";
 
 //change done by sohan
-export const devMode = false;
-export const BaseUrl = devMode ? "http://localhost:3000" : "newlink";
+export const devMode = true;
+export const BaseUrl = devMode
+  ? "http://localhost:3000"
+  : "https://lucky-washing-panadura.vercel.app/";
 
 export const globalDefaultCustomer = {
   enable: true,
@@ -391,6 +393,7 @@ export interface IClient {
   edDeliveryfee: number | null;
   edPaymentPortion: string;
   edPaymentPortionAmount: number | null;
+  nextInvoiceIdSuffix: string;
 }
 
 interface ICartVariation {

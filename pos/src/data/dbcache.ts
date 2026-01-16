@@ -19,7 +19,7 @@ import {
   IProductVarient,
   IStaff,
 } from "@/data";
-import { focusBarcode, getVariationName } from "@/utils/common";
+import { BasicDataFetch, focusBarcode, getVariationName } from "@/utils/common";
 
 import { Dexie, Table } from "dexie";
 import React from "react";
@@ -60,7 +60,7 @@ cachedb
     businessMeta:
       "id,businessName,businessLogo,ownerName,ownerMobileNos,categories,sms",
     client:
-      "id,lastProductFetch,lastOrderId,editMode,edCustomerMobile,edCustomerPaymentMethod,edDeliveryfee,edPaymentPortion",
+      "id,lastProductFetch,lastOrderId,editMode,edCustomerMobile,edCustomerPaymentMethod,edDeliveryfee,edPaymentPortion,nextInvoiceIdSuffix",
     cartItem:
       "++id,name,variationName,priceVariation,image,productVarientId,unitPrice,quantity",
     holdedCartItem:
@@ -108,12 +108,55 @@ export async function ensureClientInit() {
       edDeliveryfee: null, //new Prisma.Decimal(50),
       edPaymentPortion: "Full Payment",
       edPaymentPortionAmount: null,
+      nextInvoiceIdSuffix: "notset",
     });
   }
 }
 
-export async function getBusinessMeta() {
-  return await cachedb.businessMeta.toCollection().first();
+export async function ensureBusinessInit(): Promise<IBusinessMeta> {
+  const exists = await getBusinessMeta();
+
+  if (exists) return exists;
+
+  const response = await BasicDataFetch({
+    method: "GET",
+    endpoint: "/api/company/meta",
+  });
+
+  // Upsert / overwrite cachedb
+  await cachedb.businessMeta.put(response.data);
+
+  // Fetch again, guaranteed to exist
+  const fresh = await getBusinessMeta();
+  if (!fresh) throw new Error("Failed to fetch business meta after init");
+
+  return fresh;
+}
+
+export async function getBusinessMeta(): Promise<IBusinessMeta | undefined> {
+  return cachedb.businessMeta.toCollection().first();
+}
+
+export async function ensureBranchesInit() {
+  const exists = await getBranchesMeta();
+
+  // Only return if data exists
+  if (exists.length > 0) return exists;
+
+  const response = await BasicDataFetch({
+    method: "GET",
+    endpoint: "/api/company/branch",
+  });
+
+  // Save all branches
+  console.log(response.data);
+  await cachedb.branchMeta.bulkPut(response.data);
+
+  return await getBranchesMeta();
+}
+
+export async function getBranchesMeta() {
+  return cachedb.branchMeta.toArray();
 }
 
 export async function saveCategory(categories: string[], kind: CategoryType) {
@@ -330,6 +373,7 @@ export async function saveAllProductWithVariants({
     edDeliveryfee: null,
     edPaymentPortion: "Full Payment",
     edPaymentPortionAmount: null,
+    nextInvoiceIdSuffix: "notset",
   });
 }
 

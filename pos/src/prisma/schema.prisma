@@ -17,7 +17,7 @@ model Staff {
   mobile    String      @unique
   pin       String
   createdAt DateTime    @default(now())
-  counterNo Int?
+  counterNo String?
   order     OrderMeta[]
 }
 
@@ -87,7 +87,7 @@ model CustomerResidential {
 
 model OrderMeta {
   id               String       @id @default(cuid())
-  invoiceId        Int          @unique @default(autoincrement())
+  invoiceId        String       @unique
   customerId       String
   status           String
   branch           String

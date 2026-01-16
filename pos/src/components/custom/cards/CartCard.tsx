@@ -19,6 +19,8 @@ import {
   clearCurrentCustomer,
   clientPrimaryKey,
   clientReset,
+  ensureBusinessInit,
+  ensureClientInit,
   getCurrentCustomer,
   getExportReadyCacheCart,
   getLastEbillId,
@@ -64,6 +66,44 @@ const CartCard = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [invoiceData, setInvoiceData] = useState<IInvoice>();
 
+  /* ----------------------Next InvoiceId ------------------------*/
+
+  const { data: session, status } = useSession();
+
+  const { data: nextInvoiceIdSuffix, isLoading } = useQuery({
+    queryKey: ["next-invoice-id"],
+    queryFn: async () => {
+      await ensureClientInit();
+
+      // 1️⃣ Try cache
+      const exists = await cachedb.client.get(clientPrimaryKey);
+
+      if (
+        exists?.nextInvoiceIdSuffix &&
+        exists.nextInvoiceIdSuffix !== "notset"
+      ) {
+        return exists.nextInvoiceIdSuffix; // ✅ always string
+      }
+
+      // 2️⃣ Fetch API
+      const response = await BasicDataFetch({
+        method: "GET",
+        endpoint: `/api/orders/nextid?operator=${session?.user.id}`,
+      });
+
+      const apiId: string = response.data;
+
+      // 3️⃣ Save to cache (safe even if exists is undefined)
+      await cachedb.client.update(clientPrimaryKey, {
+        nextInvoiceIdSuffix: apiId,
+      });
+
+      return apiId; // ✅ ALWAYS return
+    },
+    staleTime: 1000 * 60 * 5,
+    enabled: !!session?.user.id,
+  });
+  console.log(nextInvoiceIdSuffix);
   const orderType = useLiveQuery(async () => {
     return getOrderType();
   }, []);
@@ -142,7 +182,6 @@ const CartCard = () => {
     { name: "Advance Payment", icon: <Coins /> },
   ];
 
-  const { data: session, status } = useSession();
   const currentCustomer = useLiveQuery(() => getCurrentCustomer(), []);
 
   const handlePayNow = async () => {
@@ -202,12 +241,15 @@ const CartCard = () => {
       return toast.error("No products in cart to order");
     }
 
+    const finalNextInvoiceId = session?.user.counterNo + nextInvoiceIdSuffix;
+
     const data = {
       customerMobile: currentCustomer?.mobile,
       orderMeta: {
         //id,customerId, -- should include
         ...(orderType?.editMode ? { id: orderType.lastOrderId } : {}), //get user id:currentOrderId via dexie func
         operator: session?.user.id,
+        invoiceId: finalNextInvoiceId,
         branch: session?.user.branch,
         paymentMethod: activeOption,
         paymentPortion: paymentPortion,
@@ -253,6 +295,16 @@ const CartCard = () => {
           queryKey: ["invoice", orderType.lastOrderId],
         });
       } else {
+        //update cache
+        const next = Number(nextInvoiceIdSuffix) + 1;
+        const finalNext = next.toString();
+        await cachedb.client.update(clientPrimaryKey, {
+          nextInvoiceIdSuffix: finalNext,
+        });
+
+        //update state of nextid
+        queryClient.setQueryData(["next-invoice-id"], finalNext);
+
         const ebillData = defaultPrint ? res.data.baseData : res.data;
 
         await updateLastEbillId(ebillData.id);

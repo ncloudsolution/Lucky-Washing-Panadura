@@ -4,14 +4,13 @@ import {
   defaultPrint,
   globalDefaultCustomer,
   IOrderItem,
-  IOrderMeta,
   TMetric,
 } from "@/data";
 import { hasPermission, T_Role } from "@/data/permissions";
 import prisma from "@/prisma/client";
-import { BasicDataFetch, EbillMsg } from "@/utils/common";
+import { EbillMsg } from "@/utils/common";
 import { Prisma } from "@prisma/client";
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 
 //add order
 export const POST = auth(async function POST(req: any) {
@@ -149,6 +148,8 @@ export const POST = auth(async function POST(req: any) {
         where: { branch: orderOperator?.branch },
       });
 
+      console.log(branchMeta);
+
       const variantIds = orderItems.map((i: any) => i.productVarientId);
 
       const productVariants = await prisma.productVarient.findMany({
@@ -235,6 +236,7 @@ export const POST = auth(async function POST(req: any) {
       { status: 201 }
     );
   } catch (err) {
+    console.log(err);
     return NextResponse.json(
       { success: false, message: "Check your connection and try again" },
       { status: 500 }
@@ -775,7 +777,8 @@ export const GET = auth(async function GET(req: any) {
       if (isNumeric) {
         try {
           // Use BigInt for invoiceId to handle large numbers
-          const invoiceId = Number(cleanSearch);
+          // const invoiceId = Number(cleanSearch);
+          const invoiceId = cleanSearch;
 
           // Search by invoiceId first
           orderMetas = await prisma.orderMeta.findMany({

@@ -12,6 +12,9 @@ import {
   ensureClientInit,
   getBusinessMeta,
   saveCategory,
+  cachedb,
+  clientPrimaryKey,
+  ensureBusinessInit,
 } from "@/data/dbcache";
 
 import NoRecordsCard from "@/components/custom/cards/NoRecordsCard";
@@ -20,6 +23,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useFullscreen } from "@/context/FullscreenContext";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useSession } from "next-auth/react";
 
 export type ICacheProduct = IProductMeta & { varients: IProductVarient[] };
 
@@ -58,6 +62,7 @@ function PosWindow() {
     });
 
   /* ---------------- Category Objects ---------------- */
+
   const FinalCategoryItems = useMemo(() => {
     return CategoryArray.map((name, index) => ({
       id: index === 0 ? "0" : name.toLowerCase().replace(/\s+/g, "-"),

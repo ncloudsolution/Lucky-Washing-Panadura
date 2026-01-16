@@ -7,6 +7,24 @@ import { backendDataValidation } from "@/utils/common";
 import { hasPermission, T_Role } from "@/data/permissions";
 import { forwardHashing } from "@/utils/hashing";
 
+async function getNextCounterNo() {
+  const highestCounter = await prisma.staff.findFirst({
+    where: {
+      counterNo: { not: null },
+    },
+    orderBy: { counterNo: "desc" },
+    select: { counterNo: true },
+  });
+
+  const nextNumber = Number(highestCounter?.counterNo ?? "0") + 1;
+
+  if (nextNumber > 99) {
+    throw new Error("Counter limit exceeded (01–99 only)");
+  }
+
+  return String(nextNumber).padStart(2, "0");
+}
+
 //create staff
 export const POST = auth(async function POST(req: any) {
   try {
@@ -25,39 +43,39 @@ export const POST = auth(async function POST(req: any) {
 
     // take this from authjs
     // authentication & permission check
-    if (!req.auth) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "you are not authenticated",
-          error: "UNAUTHORIZED",
-        },
-        { status: 401 }
-      );
-    }
+    // if (!req.auth) {
+    //   return NextResponse.json(
+    //     {
+    //       success: false,
+    //       message: "you are not authenticated",
+    //       error: "UNAUTHORIZED",
+    //     },
+    //     { status: 401 }
+    //   );
+    // }
 
-    const authRole = (req.auth?.user?.role?.toLowerCase() ||
-      "system") as T_Role;
-    const authBranch = req.auth?.user?.branch.toLowerCase() || "homagama";
+    // const authRole = (req.auth?.user?.role?.toLowerCase() ||
+    //   "system") as T_Role;
+    // const authBranch = req.auth?.user?.branch.toLowerCase() || "homagama";
 
-    // const authRole = "system" as T_Role;
-    // const authBranch = "homagama";
+    // // const authRole = "system" as T_Role;
+    // // const authBranch = "homagama";
 
-    const resourceBranch = data.branch.toLowerCase();
+    // const resourceBranch = data.branch.toLowerCase();
 
-    if (
-      !hasPermission({
-        userRole: authRole,
-        permission: "create:staff",
-        resourceBranch,
-        userBranch: authBranch,
-      })
-    ) {
-      return NextResponse.json(
-        { success: false, message: "Not authorized" },
-        { status: 403 }
-      );
-    }
+    // if (
+    //   !hasPermission({
+    //     userRole: authRole,
+    //     permission: "create:staff",
+    //     resourceBranch,
+    //     userBranch: authBranch,
+    //   })
+    // ) {
+    //   return NextResponse.json(
+    //     { success: false, message: "Not authorized" },
+    //     { status: 403 }
+    //   );
+    // }
 
     //check duplications
     const existingStaff = await prisma.staff.findFirst({
@@ -96,32 +114,28 @@ export const POST = auth(async function POST(req: any) {
           );
         }
 
-        await prisma.staff.create({ data: { ...baseMaster, counterNo: 1 } });
+        const counterNo = await getNextCounterNo();
+
+        await prisma.staff.create({
+          data: {
+            ...baseMaster,
+            counterNo,
+          },
+        });
+
         break;
       }
 
       case "Cashier": {
-        const highestCounter = await prisma.staff.findFirst({
-          where: {
-            role: "Cashier",
-            branch: data.branch,
-            // role: { equals: "cashier", mode: "insensitive" },
-            // branch: { equals: data.branch, mode: "insensitive" },
-            NOT: { counterNo: null }, // ignore nulls
-          },
-          orderBy: { counterNo: "desc" },
-          select: { counterNo: true },
-        });
+        const counterNo = await getNextCounterNo();
 
-        const nextCounterNo = (highestCounter?.counterNo ?? 0) + 1;
-
-        // return NextResponse.json(
-        //   { success: true, data: { highestCounter, nextCounterNo } },
-        //   { status: 201 }
-        // );
         await prisma.staff.create({
-          data: { ...baseMaster, counterNo: nextCounterNo },
+          data: {
+            ...baseMaster,
+            counterNo,
+          },
         });
+
         break;
       }
 

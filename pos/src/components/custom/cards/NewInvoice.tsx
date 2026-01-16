@@ -141,9 +141,11 @@ const NewInvoice = ({
         <CardDescription className="print:text-primary print:text-xs text-center">
           {data.baseData.address}
         </CardDescription>
-        <CardDescription className="text-primary">
-          {data.baseData.hotlines.join(", ")}
-        </CardDescription>
+        {data.baseData.hotlines && (
+          <CardDescription className="text-primary">
+            {data.baseData.hotlines.join(", ")}
+          </CardDescription>
+        )}
       </div>
       <div className="w-full h-[2px] bg-primary" />
 
