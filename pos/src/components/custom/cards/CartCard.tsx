@@ -203,6 +203,7 @@ const CartCard = () => {
     customerError: false,
     deliveryfeeError: false,
     paymentPortionAmountError: false,
+    queueError: false,
   };
   const [error, setError] = useState(initialErrorState);
 
@@ -226,6 +227,8 @@ const CartCard = () => {
   ];
 
   const currentCustomer = useLiveQuery(() => getCurrentCustomer(), []);
+
+  const quelen = queue?.length as number;
 
   const handlePayNow = async () => {
     const start = performance.now();
@@ -255,11 +258,16 @@ const CartCard = () => {
       newErrorState.customerError = true;
     }
 
+    if (quelen > 10) {
+      newErrorState.queueError = true;
+    }
+
     // 🚨 If ANY error exists
     if (
       newErrorState.deliveryfeeError ||
       newErrorState.paymentPortionAmountError ||
-      newErrorState.customerError
+      newErrorState.customerError ||
+      newErrorState.queueError
     ) {
       setError(newErrorState);
       setIsSubmitting(false);
@@ -270,6 +278,8 @@ const CartCard = () => {
         toast.error("Advance payment cannot be 0 or total.");
       } else if (newErrorState.deliveryfeeError) {
         toast.error("Delivery fee should include the order");
+      } else if (newErrorState.queueError) {
+        toast.error("Queue full. Submit after it drops below 10.");
       }
 
       return;

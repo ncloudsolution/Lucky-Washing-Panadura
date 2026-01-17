@@ -11,6 +11,7 @@ import { TipWrapper } from "../wrapper/TipWrapper";
 import { useLiveQuery } from "dexie-react-hooks";
 import { cachedb } from "@/data/dbcache";
 import { formatDate } from "@/utils/common";
+import { toast } from "sonner";
 
 export function QueueBtn() {
   const [popoverOpen, setPopoverOpen] = useState(false);
@@ -18,6 +19,19 @@ export function QueueBtn() {
   const queue = useLiveQuery(() => cachedb.queue.toArray(), []);
   const len = queue?.length as number;
   //   const len: number = 10;
+
+  //   function getQueueToast(len: number) {
+  //     if (len <= 3) {
+  //       return { message: "Connection stable", type: "success" };
+  //     }
+  //     if (len <= 7) {
+  //       return { message: "Connection weak, please monitor", type: "warning" };
+  //     }
+  //     return {
+  //       message: "Connection unstable, please take action",
+  //       type: "error",
+  //     };
+  //   }
 
   function getQueueBorder(len: number) {
     if (len === 0) return "border-superbase";
@@ -34,6 +48,15 @@ export function QueueBtn() {
     if (len === 9) return "border-red-500";
     return "border-red-600";
   }
+
+  //   useEffect(() => {
+  //     const toastInfo = queue ? getQueueToast(len) : null;
+
+  //     if (toastInfo) {
+  //       toast[toastInfo.type](toastInfo.message);
+  //       // toast.success / toast.warning / toast.error
+  //     }
+  //   }, [queue]);
 
   return (
     <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
@@ -59,7 +82,7 @@ export function QueueBtn() {
           </div>
 
           <div className="flex flex-col w-full">
-            {queue && queue?.length > 0 ? (
+            {queue && len > 0 ? (
               <>
                 {queue?.map((q, index) => {
                   const [date, time] = formatDate(q.createdAt.toLocaleString());
@@ -78,6 +101,16 @@ export function QueueBtn() {
                     </div>
                   );
                 })}
+
+                <div
+                  className={`w-full text-center py-2 font-semibold text-sm ${len > 7 ? "text-destructive" : len > 3 ? "text-amber-600" : "text-superbase"} `}
+                >
+                  {len > 7
+                    ? "Connection unstable, please take action"
+                    : len > 3
+                      ? "Connection weak, please monitor"
+                      : "Connection stable"}
+                </div>
               </>
             ) : (
               <div className="text-muted-foreground text-sm text-center py-4">
