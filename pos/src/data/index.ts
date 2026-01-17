@@ -3,7 +3,7 @@ import { Prisma } from "@prisma/client";
 import { BankDetailsCard } from "@/components/custom/cards/BankDetailsCard";
 
 //change done by sohan
-export const devMode = true;
+export const devMode = false;
 export const BaseUrl = devMode
   ? "http://localhost:3000"
   : "https://lucky-washing-panadura.vercel.app/";
