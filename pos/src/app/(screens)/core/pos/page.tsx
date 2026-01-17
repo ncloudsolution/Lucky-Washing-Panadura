@@ -24,7 +24,6 @@ import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useFullscreen } from "@/context/FullscreenContext";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useSession } from "next-auth/react";
 
 export type ICacheProduct = IProductMeta & { varients: IProductVarient[] };
 
@@ -116,7 +115,7 @@ function PosWindow() {
   const baseProducts = filteredProducts === null ? products : filteredProducts;
 
   const selectedCategory = FinalCategoryItems.find(
-    (c) => c.id === selectedCategoryId
+    (c) => c.id === selectedCategoryId,
   );
 
   const displayProducts =
@@ -124,8 +123,9 @@ function PosWindow() {
       ? baseProducts
       : baseProducts?.filter((product) =>
           product.categories?.some(
-            (cat) => cat.toLowerCase() === selectedCategory?.name?.toLowerCase()
-          )
+            (cat) =>
+              cat.toLowerCase() === selectedCategory?.name?.toLowerCase(),
+          ),
         );
 
   const { isFullscreen } = useFullscreen();

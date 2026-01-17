@@ -13,6 +13,7 @@ import { IoIosCloseCircle } from "react-icons/io";
 import { FaCircleCheck } from "react-icons/fa6";
 import { PiWarningCircleFill } from "react-icons/pi";
 import { productData } from "@/data";
+import QueueProcessor from "@/components/custom/other/QueueProcessor";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -116,6 +117,7 @@ export default function RootLayout({
               ),
             }}
           />
+          <QueueProcessor />
           {children}
         </body>
       </html>

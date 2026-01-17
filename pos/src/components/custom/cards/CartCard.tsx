@@ -59,9 +59,11 @@ import {
 } from "@/data";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { TipWrapper } from "../wrapper/TipWrapper";
+import { nanoid } from "nanoid";
 
 import { useReactToPrint } from "react-to-print";
 import NewInvoice, { IInvoice } from "./NewInvoice";
+import { addToQueue } from "@/data/queue";
 
 const CartCard = () => {
   const queryClient = useQueryClient();
@@ -118,7 +120,7 @@ const CartCard = () => {
       const companyMetaCli = await ensureBusinessInit();
       const allBranchesCli = await ensureBranchesInit();
       const branchDetails = allBranchesCli.find(
-        (i) => i.branch === session?.user.branch
+        (i) => i.branch === session?.user.branch,
       );
 
       const data = {
@@ -193,11 +195,16 @@ const CartCard = () => {
     fetchDeliveryAndOption();
   }, [orderType]);
 
+  const queue = useLiveQuery(() => cachedb.queue.toArray(), []);
+
   // Helper to refresh the value after submit
-  const refreshLastEbill = async () => {
-    const id = await getLastEbillId();
-    setLastEbillId(id ?? null);
-  };
+  useEffect(() => {
+    const refreshLastEbill = async () => {
+      const id = await getLastEbillId();
+      setLastEbillId(id ?? null);
+      refreshLastEbill();
+    };
+  }, [queue]);
 
   const total = useLiveQuery(() => getTotalFromCacheCart(), [], 0);
 
@@ -321,7 +328,7 @@ const CartCard = () => {
     const companyMetaCli = await getBusinessMeta();
     const allBranchesCli = await getBranchesMeta();
     const branchDetails = allBranchesCli.find(
-      (i) => i.branch === session?.user.branch
+      (i) => i.branch === session?.user.branch,
     );
 
     const dataCli = {
@@ -355,6 +362,13 @@ const CartCard = () => {
       },
       items: revItems,
     };
+
+    await addToQueue({
+      id: nanoid(),
+      edit: orderType?.editMode as boolean,
+      payload: data,
+      createdAt: new Date().toISOString(),
+    });
 
     // full clent side billing data process end ------------------------
 
@@ -398,7 +412,8 @@ const CartCard = () => {
         // await updateLastEbillId(ebillData.id);
 
         const ebillId = dataCli.baseData.id;
-        await updateLastEbillId(ebillId);
+        //handle with queue cache
+        // await updateLastEbillId(ebillId);
 
         await refreshLastEbill();
 
@@ -545,7 +560,7 @@ const CartCard = () => {
                   onChange={(e) => {
                     const value = e.target.value;
                     setPaymentPortionAmount(
-                      value === "" ? 0 : parseFloat(value)
+                      value === "" ? 0 : parseFloat(value),
                     );
                   }}
                 />

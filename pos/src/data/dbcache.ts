@@ -17,6 +17,7 @@ import {
   IPriceVarient,
   IProductMeta,
   IProductVarient,
+  IQueue,
   IStaff,
 } from "@/data";
 import { BasicDataFetch, focusBarcode, getVariationName } from "@/utils/common";
@@ -41,6 +42,7 @@ declare module "dexie" {
     cartItem: Table<ICartItem, number>;
     holdedCartItem: Table<IHoldedCartItem, number>;
     currentCustomer: Table<ICurrentCustomer, number>;
+    queue: Table<IQueue, string>;
   }
 }
 
@@ -66,6 +68,7 @@ cachedb
     holdedCartItem:
       "++id,customerMobile,time,cartId,name,variationName,priceVariation,image,productVarientId,unitPrice,quantity",
     currentCustomer: "id,name,mobile",
+    queue: "id,payload,edit,createdAt",
   })
   .upgrade(async (tx) => {
     const tablesToClear = [
@@ -83,6 +86,7 @@ cachedb
       "cartItem",
       "holdedCartItem",
       "currentCustomer",
+      "queue",
     ];
 
     for (const tableName of tablesToClear) {
@@ -182,7 +186,7 @@ export async function saveCategory(categories: string[], kind: CategoryType) {
       const orderedCategories = [
         "All",
         ...categories.filter(
-          (c) => c.toLowerCase() !== "all" && c.toLowerCase() !== "temporary"
+          (c) => c.toLowerCase() !== "all" && c.toLowerCase() !== "temporary",
         ),
         "Temporary",
       ];
@@ -219,7 +223,7 @@ export async function removeCategory(category: string, kind: CategoryType) {
   switch (kind) {
     case "income": {
       const updated = meta.incomeCategories.filter(
-        (c) => c.toLowerCase() !== category.toLowerCase()
+        (c) => c.toLowerCase() !== category.toLowerCase(),
       );
 
       await cachedb.businessMeta.update(meta.id!, {
@@ -230,7 +234,7 @@ export async function removeCategory(category: string, kind: CategoryType) {
 
     case "expense": {
       const updated = meta.expenseCategories.filter(
-        (c) => c.toLowerCase() !== category.toLowerCase()
+        (c) => c.toLowerCase() !== category.toLowerCase(),
       );
 
       await cachedb.businessMeta.update(meta.id!, {
@@ -241,7 +245,7 @@ export async function removeCategory(category: string, kind: CategoryType) {
 
     case "product": {
       const updated = meta.categories.filter(
-        (c) => c.toLowerCase() !== category.toLowerCase()
+        (c) => c.toLowerCase() !== category.toLowerCase(),
       );
 
       await cachedb.businessMeta.update(meta.id!, {
@@ -333,7 +337,7 @@ export async function getCacheProductsWithVariants(): Promise<{
         varients.length > 0 ? new Date(varients[0].createdAt).getTime() : 0;
 
       return { ...product, varients, latestVarientDate };
-    })
+    }),
   );
 
   // Sort products by latest variant date (descending)
@@ -358,7 +362,7 @@ export async function saveAllProductWithVariants({
       // Use bulkPut to add or update records
       await cachedb.productMeta.bulkPut(data.productsMeta);
       await cachedb.productVarient.bulkPut(data.productsVarients);
-    }
+    },
   );
 
   // Update timestamp without wiping DB
@@ -378,7 +382,7 @@ export async function saveAllProductWithVariants({
 }
 
 export async function updateBaseDataOfProduct(
-  data: IProductMeta & { id: string }
+  data: IProductMeta & { id: string },
 ) {
   return await cachedb.productMeta.where("id").equals(data.id).modify({
     name: data.name,
@@ -464,7 +468,7 @@ export async function getCacheProductMetaOnlyByBarcode(input: string) {
 
 export async function addtoCacheCart(
   variations: ISelectedVariation[],
-  edit: boolean = false
+  edit: boolean = false,
 ) {
   let addedCount = 0; // track how many items got added
 
@@ -484,14 +488,14 @@ export async function addtoCacheCart(
           React.createElement(
             "span",
             { className: "font-semibold", key: "1" },
-            "Product Already Added"
+            "Product Already Added",
           ),
           React.createElement(
             "span",
             { className: "text-[11px] text-muted-foreground", key: "2" },
-            `Variant ID - ${variationId}`
+            `Variant ID - ${variationId}`,
           ),
-        ])
+        ]),
       );
       continue;
     }
@@ -526,7 +530,7 @@ export async function addtoCacheCart(
   // show success only if at least one was added
   if (addedCount > 0 && !edit) {
     toast.success(
-      `${addedCount} Product${addedCount > 1 ? "s" : ""} Added Successfully`
+      `${addedCount} Product${addedCount > 1 ? "s" : ""} Added Successfully`,
     );
   }
   focusBarcode();
@@ -558,7 +562,7 @@ export function transformCartData(products: ICartItem[]): IGroupedCart[] {
 }
 export async function updateCacheCartQuantity(
   productVarientId: string,
-  quantity: number
+  quantity: number,
 ) {
   return await cachedb.cartItem
     .where("productVarientId")
@@ -568,7 +572,7 @@ export async function updateCacheCartQuantity(
 
 export async function updateCacheCartUnitPrice(
   productVarientId: string,
-  unitPrice: number
+  unitPrice: number,
 ) {
   return await cachedb.cartItem
     .where("productVarientId")
@@ -578,7 +582,7 @@ export async function updateCacheCartUnitPrice(
 
 export async function addNewProductPriceToTheVarientWithInCart(
   vid: string,
-  priceSet: IPriceVarient
+  priceSet: IPriceVarient,
 ) {
   const cleanPrice = {
     set: Number(priceSet.set),
@@ -622,7 +626,7 @@ export async function removeAllFromCacheCart() {
   });
   await setCurrentCustomer(
     globalDefaultCustomer.name,
-    globalDefaultCustomer.mobile
+    globalDefaultCustomer.mobile,
   );
   focusBarcode();
 }
@@ -713,7 +717,7 @@ export async function getAllHeldCartsMeta() {
 
 export async function switchHeldtoCurrentCart(
   customerMobile: string,
-  time: string
+  time: string,
 ) {
   // Step 1: clear the current cart
   await removeAllFromCacheCart();
@@ -764,7 +768,7 @@ export async function editInvoice(data: any) {
 
   await setCurrentCustomer(
     data.baseData.customer,
-    data.baseData.customerMobile
+    data.baseData.customerMobile,
   );
 
   await cachedb.client.update(clientPrimaryKey, {
@@ -794,7 +798,7 @@ export async function editInvoice(data: any) {
       quantity: v.quantity,
       prices: await getPrices(v.id), // fetch cached price
       // Note: sellingPrice is handled separately
-    }))
+    })),
   );
 
   // Step 5: Add each variation to cache and update unit price
@@ -806,9 +810,9 @@ export async function editInvoice(data: any) {
       // Update the unit price using sellingPrice from original variations array
       await updateCacheCartUnitPrice(
         item.variationId,
-        variations[index].sellingPrice
+        variations[index].sellingPrice,
       );
-    })
+    }),
   );
   toast.success(`Cart Filled with Invoice No ${data.baseData.invoiceId} Items`);
 }

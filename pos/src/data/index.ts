@@ -431,6 +431,13 @@ export interface ICurrentCustomer {
   mobile: string;
 }
 
+export interface IQueue {
+  id: string;
+  payload: any;
+  edit: boolean;
+  createdAt: string;
+}
+
 export type BreakdownItem = {
   type: string;
   count: number;
