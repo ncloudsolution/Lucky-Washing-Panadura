@@ -23,18 +23,24 @@ export async function processOrderQueue() {
 
   try {
     while (true) {
+      console.log("upper que executing");
       const nextItem = await getNextQueueItem(); // ⬅️ Dexie / IndexedDB
 
       if (!nextItem) break; // ✅ queue empty → stop
+
+      console.log("lower que executing");
 
       const result = await sendWithRetry(nextItem);
 
       if (result.success) {
         await removeFromQueue(nextItem.id); // ✅ remove item
-        await updateLastEbillId(result.serverId as string);
+        if (result.serverId !== "edited") {
+          await updateLastEbillId(result.serverId as string);
+        }
       } else {
         // ❌ failed after retries → skip item
         // await markAsFailed(nextItem.id);
+        break;
       }
     }
   } finally {
@@ -55,9 +61,9 @@ async function sendWithRetry(
         data: item.payload,
       });
 
-      const serverId = response?.data?.baseData?.id;
+      const serverId = response?.data?.baseData?.id ?? "edited";
 
-      if (!serverId) {
+      if (!serverId && item.edit) {
         throw new Error("Invalid response: baseData.id missing");
       }
 

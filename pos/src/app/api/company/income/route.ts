@@ -11,7 +11,7 @@ import { Prisma } from "@prisma/client";
 export const POST = auth(async function POST(req: any) {
   try {
     const data = await req.json();
-    console.log(data);
+
     const { id, due, ...rest } = data;
 
     // Backend validation
@@ -33,7 +33,7 @@ export const POST = auth(async function POST(req: any) {
           message: "you are not authenticated",
           error: "UNAUTHORIZED",
         },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -53,7 +53,7 @@ export const POST = auth(async function POST(req: any) {
     ) {
       return NextResponse.json(
         { success: false, message: "Not authorized" },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
@@ -61,12 +61,12 @@ export const POST = auth(async function POST(req: any) {
 
     return NextResponse.json(
       { success: true, message: "Payment added successfully", data: x.id },
-      { status: 201 }
+      { status: 201 },
     );
   } catch (err) {
     return NextResponse.json(
       { success: false, message: "Internal Server Error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }) as (req: Request) => Promise<Response>;
@@ -83,7 +83,7 @@ export const DELETE = auth(async function DELETE(req) {
           message: "you are not authenticated",
           error: "UNAUTHORIZED",
         },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -102,7 +102,7 @@ export const DELETE = auth(async function DELETE(req) {
     ) {
       return NextResponse.json(
         { success: false, message: "Not authorized" },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
@@ -118,7 +118,7 @@ export const DELETE = auth(async function DELETE(req) {
         message: `  Payment deleted sucessfully`,
         data: null,
       },
-      { status: 200 }
+      { status: 200 },
     );
   } catch (error) {
     let message = "Internal server error";
@@ -134,7 +134,7 @@ export const DELETE = auth(async function DELETE(req) {
         success: false,
         message,
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 });

@@ -113,7 +113,6 @@ const CartCard = () => {
   });
   const finalNextInvoiceId: string =
     session?.user.counterNo + nextInvoiceIdSuffix;
-  console.log(nextInvoiceIdSuffix);
 
   useEffect(() => {
     async function Cli() {
@@ -164,7 +163,7 @@ const CartCard = () => {
   // }, 0);
 
   const [lastEbillId, setLastEbillId] = useState<string | null>(null);
-
+  const queue = useLiveQuery(() => cachedb.queue.toArray(), []);
   // Fetch once on mount and whenever we manually trigger refresh
   useEffect(() => {
     const fetchLastEbill = async () => {
@@ -172,7 +171,7 @@ const CartCard = () => {
       setLastEbillId(id ?? null);
     };
     fetchLastEbill();
-  }, []);
+  }, [queue]);
 
   useEffect(() => {
     if (invoiceData && contentRef.current) {
@@ -194,17 +193,6 @@ const CartCard = () => {
     };
     fetchDeliveryAndOption();
   }, [orderType]);
-
-  const queue = useLiveQuery(() => cachedb.queue.toArray(), []);
-
-  // Helper to refresh the value after submit
-  useEffect(() => {
-    const refreshLastEbill = async () => {
-      const id = await getLastEbillId();
-      setLastEbillId(id ?? null);
-      refreshLastEbill();
-    };
-  }, [queue]);
 
   const total = useLiveQuery(() => getTotalFromCacheCart(), [], 0);
 
@@ -415,7 +403,7 @@ const CartCard = () => {
         //handle with queue cache
         // await updateLastEbillId(ebillId);
 
-        await refreshLastEbill();
+        // await refreshLastEbill();
 
         if (defaultPrint) {
           setInvoiceData(dataCli);

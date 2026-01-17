@@ -79,7 +79,6 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
         token.branch = user.branch;
         token.counterNo = user.counterNo;
       }
-      // console.log(token);
       return token;
     },
     async session({ session, token }) {
@@ -89,7 +88,6 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
         session.user.branch = token.branch;
         session.user.counterNo = token.counterNo;
       }
-      // console.log(session);
       return session;
     },
   },

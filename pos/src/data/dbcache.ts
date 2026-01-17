@@ -153,7 +153,6 @@ export async function ensureBranchesInit() {
   });
 
   // Save all branches
-  console.log(response.data);
   await cachedb.branchMeta.bulkPut(response.data);
 
   return await getBranchesMeta();

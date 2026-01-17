@@ -81,7 +81,7 @@ export function QueueBtn() {
               </>
             ) : (
               <div className="text-muted-foreground text-sm text-center py-4">
-                Queue is empty
+                ------ Queue is empty ------
               </div>
             )}
           </div>
