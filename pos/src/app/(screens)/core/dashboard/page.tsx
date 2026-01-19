@@ -84,7 +84,8 @@ const Dashboard = () => {
       return response?.data as IAnalytics;
     },
 
-    staleTime: 1000 * 60 * 5,
+    staleTime: 0, // 👈 data becomes stale immediately
+    refetchOnMount: "always", // 👈 ALWAYS fetch when route is entered
   });
 
   function getTotalValue(type: "count" | "saleValue"): number {
@@ -96,7 +97,7 @@ const Dashboard = () => {
 
   function getIncome(type: "collected" | "remains"): number {
     const breakdown = analytics?.incomes.find(
-      (inc) => inc.branch === branch
+      (inc) => inc.branch === branch,
     )?.breakdown;
     const totalAmount =
       breakdown?.reduce((sum, item) => sum + item.amount, 0) ?? 0;
@@ -107,7 +108,7 @@ const Dashboard = () => {
 
   function getExpense(): number {
     const breakdown = analytics?.expenses.find(
-      (inc) => inc.branch === branch
+      (inc) => inc.branch === branch,
     )?.breakdown;
     const totalAmount =
       breakdown?.reduce((sum, item) => sum + item.amount, 0) ?? 0;
@@ -122,18 +123,18 @@ const Dashboard = () => {
 
   function getAmountByType(
     breakdown: BreakdownItem[] | undefined,
-    type: TPaymentMethod
+    type: TPaymentMethod,
   ): number {
     return breakdown?.find((b) => b.type === type)?.amount ?? 0;
   }
 
   function getNetCashflowBreakdown() {
     const expenseBreakdown = analytics?.expenses.find(
-      (e) => e.branch === branch
+      (e) => e.branch === branch,
     )?.breakdown;
 
     const incomeBreakdown = analytics?.incomes.find(
-      (i) => i.branch === branch
+      (i) => i.branch === branch,
     )?.breakdown;
 
     return ENUMPaymentMethodArray.reduce<Record<TPaymentMethod, number>>(
@@ -148,7 +149,7 @@ const Dashboard = () => {
         Card: 0,
         Bank: 0,
         Credit: 0,
-      }
+      },
     );
   }
 
@@ -163,8 +164,8 @@ const Dashboard = () => {
             item.type === "Cash"
               ? "var(--color-superbase)"
               : item.type === "Credit"
-              ? "var(--color-destructive)"
-              : `var(--chart-${index + 1})`,
+                ? "var(--color-destructive)"
+                : `var(--chart-${index + 1})`,
         })) ?? [];
 
     return breakdown;
@@ -206,7 +207,7 @@ const Dashboard = () => {
             //   { type: "Bank", count: 0, saleValue: 0 },
             //   { type: "Credit", count: 0, saleValue: 0 },
             // ],
-          }
+          },
         )
       : null;
 
@@ -348,7 +349,7 @@ const Dashboard = () => {
                   {analytics && analytics.products.length > 0 ? (
                     (() => {
                       const branchData = analytics.products.find(
-                        (i) => i.branch === branch
+                        (i) => i.branch === branch,
                       );
                       if (
                         !branchData ||
@@ -366,7 +367,7 @@ const Dashboard = () => {
                           <span className="line-clamp-1">
                             {getProductVariantFullNameByVarientId(
                               products!,
-                              it.productVarientId
+                              it.productVarientId,
                             )}
                           </span>
                           <span>{it.count}</span>
@@ -473,8 +474,8 @@ const Dashboard = () => {
                             value === 0
                               ? "text-muted-foreground"
                               : value > 0
-                              ? "text-green-700"
-                              : "text-destructive"
+                                ? "text-green-700"
+                                : "text-destructive"
                           } flex text-base justify-between gap-x-5`}
                         >
                           <span className="w-[50px]">{key}</span>
@@ -485,7 +486,7 @@ const Dashboard = () => {
                             }).format(value)}
                           </span>
                         </div>
-                      )
+                      ),
                     )}
                   </div>
                 </div>

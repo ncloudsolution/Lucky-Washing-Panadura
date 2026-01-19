@@ -136,8 +136,12 @@ const FormIncome = ({
               ...oldData,
               data: [...oldArray, newData],
             };
-          }
+          },
         );
+
+        await queryClient.invalidateQueries({
+          queryKey: ["invoice", modFormVal.orderId],
+        });
       } else {
         // queryClient.setQueryData(["recent-expenses"], (oldData: any) => {
         //   const oldArray: IIncome[] = oldData?.data ?? [];

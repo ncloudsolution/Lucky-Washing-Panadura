@@ -207,6 +207,10 @@ export function OrderSheet({ id }: { id: string }) {
                                     },
                                   );
 
+                                  await queryClient.invalidateQueries({
+                                    queryKey: ["invoice", id],
+                                  });
+
                                   toast.success(res.message);
                                 } catch (err) {
                                   const errorMessage =
