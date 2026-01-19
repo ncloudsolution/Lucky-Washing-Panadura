@@ -19,10 +19,16 @@ import {
   clearCurrentCustomer,
   clientPrimaryKey,
   clientReset,
+  ensureBranchesInit,
+  ensureBusinessInit,
+  ensureClientInit,
+  getBranchesMeta,
+  getBusinessMeta,
   getCurrentCustomer,
   getExportReadyCacheCart,
   getLastEbillId,
   getOrderType,
+  getReverseExportFormat,
   getTotalFromCacheCart,
   removeAllFromCacheCart,
   setClientEditMode,
@@ -48,21 +54,104 @@ import {
   defaultPrint,
   globalDefaultCustomer,
   IOrderMeta,
+  TOrderStatus,
+  TPaymentMethod,
 } from "@/data";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { TipWrapper } from "../wrapper/TipWrapper";
+import { nanoid } from "nanoid";
 
 import { useReactToPrint } from "react-to-print";
 import NewInvoice, { IInvoice } from "./NewInvoice";
+import { addToQueue } from "@/data/queue";
 
 const CartCard = () => {
   const queryClient = useQueryClient();
   const products = useLiveQuery(() => cachedb.cartItem.toArray(), []);
   const structuredProducts = transformCartData(products ?? []);
-  const [activeOption, setActiveOption] = useState("Cash");
+  const [activeOption, setActiveOption] = useState<TPaymentMethod>("Cash");
   const [paymentPortion, setPaymentPortion] = useState("Full Payment");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [invoiceData, setInvoiceData] = useState<IInvoice>();
+
+  const { data: session, status } = useSession();
+
+  /* ----------------------Next InvoiceId ------------------------*/
+
+  const { data: nextInvoiceIdSuffix, isLoading } = useQuery({
+    queryKey: ["next-invoice-id"],
+    queryFn: async () => {
+      await ensureClientInit();
+
+      // 1️⃣ Try cache
+      const exists = await cachedb.client.get(clientPrimaryKey);
+
+      if (
+        exists?.nextInvoiceIdSuffix &&
+        exists.nextInvoiceIdSuffix !== "notset"
+      ) {
+        return exists.nextInvoiceIdSuffix; // ✅ always string
+      }
+
+      // 2️⃣ Fetch API
+      const response = await BasicDataFetch({
+        method: "GET",
+        endpoint: `/api/orders/nextid?operator=${session?.user.id}`,
+      });
+
+      const apiId: string = response.data;
+
+      // 3️⃣ Save to cache (safe even if exists is undefined)
+      await cachedb.client.update(clientPrimaryKey, {
+        nextInvoiceIdSuffix: apiId,
+      });
+
+      return apiId; // ✅ ALWAYS return
+    },
+    staleTime: 1000 * 60 * 5,
+    enabled: !!session?.user.id,
+  });
+  const finalNextInvoiceId: string =
+    session?.user.counterNo + nextInvoiceIdSuffix;
+
+  useEffect(() => {
+    async function Cli() {
+      const companyMetaCli = await ensureBusinessInit();
+      const allBranchesCli = await ensureBranchesInit();
+      const branchDetails = allBranchesCli.find(
+        (i) => i.branch === session?.user.branch,
+      );
+
+      const data = {
+        id: "x",
+        invoiceId: finalNextInvoiceId,
+        createdAt: Date.now(),
+        saleValue: total,
+        deliveryfee: deliveryfee,
+        status: "Processing",
+
+        paymentMethod: activeOption,
+        incomeCategory: paymentPortion,
+        paymentAmount:
+          paymentPortion === "Advance Payment" ||
+          paymentPortion === "Credit Payment"
+            ? paymentPortionAmount
+            : total + deliveryfee,
+
+        business: companyMetaCli.businessName,
+        branch: session?.user.branch,
+        address: branchDetails?.address,
+        hotlines: branchDetails?.hotlines,
+        operator: session?.user.id,
+        counterNo: session?.user.counterNo,
+
+        //this data get only for sheet not the invoice
+        customer: "x",
+        customerMobile: "x",
+        customerCreatedAt: Date.now(),
+      };
+    }
+  });
 
   const orderType = useLiveQuery(async () => {
     return getOrderType();
@@ -74,7 +163,7 @@ const CartCard = () => {
   // }, 0);
 
   const [lastEbillId, setLastEbillId] = useState<string | null>(null);
-
+  const queue = useLiveQuery(() => cachedb.queue.toArray(), []);
   // Fetch once on mount and whenever we manually trigger refresh
   useEffect(() => {
     const fetchLastEbill = async () => {
@@ -82,7 +171,7 @@ const CartCard = () => {
       setLastEbillId(id ?? null);
     };
     fetchLastEbill();
-  }, []);
+  }, [queue]);
 
   useEffect(() => {
     if (invoiceData && contentRef.current) {
@@ -105,12 +194,6 @@ const CartCard = () => {
     fetchDeliveryAndOption();
   }, [orderType]);
 
-  // Helper to refresh the value after submit
-  const refreshLastEbill = async () => {
-    const id = await getLastEbillId();
-    setLastEbillId(id ?? null);
-  };
-
   const total = useLiveQuery(() => getTotalFromCacheCart(), [], 0);
 
   const [remoteOrder, setRemoteOrder] = useState(false);
@@ -120,6 +203,7 @@ const CartCard = () => {
     customerError: false,
     deliveryfeeError: false,
     paymentPortionAmountError: false,
+    queueError: false,
   };
   const [error, setError] = useState(initialErrorState);
 
@@ -142,8 +226,9 @@ const CartCard = () => {
     { name: "Advance Payment", icon: <Coins /> },
   ];
 
-  const { data: session, status } = useSession();
   const currentCustomer = useLiveQuery(() => getCurrentCustomer(), []);
+
+  const quelen = queue?.length as number;
 
   const handlePayNow = async () => {
     const start = performance.now();
@@ -173,11 +258,16 @@ const CartCard = () => {
       newErrorState.customerError = true;
     }
 
+    if (quelen > 10) {
+      newErrorState.queueError = true;
+    }
+
     // 🚨 If ANY error exists
     if (
       newErrorState.deliveryfeeError ||
       newErrorState.paymentPortionAmountError ||
-      newErrorState.customerError
+      newErrorState.customerError ||
+      newErrorState.queueError
     ) {
       setError(newErrorState);
       setIsSubmitting(false);
@@ -188,6 +278,8 @@ const CartCard = () => {
         toast.error("Advance payment cannot be 0 or total.");
       } else if (newErrorState.deliveryfeeError) {
         toast.error("Delivery fee should include the order");
+      } else if (newErrorState.queueError) {
+        toast.error("Queue full. Submit after it drops below 10.");
       }
 
       return;
@@ -208,6 +300,7 @@ const CartCard = () => {
         //id,customerId, -- should include
         ...(orderType?.editMode ? { id: orderType.lastOrderId } : {}), //get user id:currentOrderId via dexie func
         operator: session?.user.id,
+        invoiceId: finalNextInvoiceId,
         branch: session?.user.branch,
         paymentMethod: activeOption,
         paymentPortion: paymentPortion,
@@ -228,13 +321,62 @@ const CartCard = () => {
       //customerId, -- should include --loop through id from mobile
     };
 
+    //full clent side billing data process start ----------------------
+    const revItems = await getReverseExportFormat();
+    const companyMetaCli = await getBusinessMeta();
+    const allBranchesCli = await getBranchesMeta();
+    const branchDetails = allBranchesCli.find(
+      (i) => i.branch === session?.user.branch,
+    );
+
+    const dataCli = {
+      baseData: {
+        id: "x",
+        invoiceId: finalNextInvoiceId,
+        createdAt: new Date().toISOString(),
+        saleValue: total,
+        deliveryfee: deliveryfee,
+        status: "Processing" as TOrderStatus,
+
+        paymentMethod: activeOption,
+        incomeCategory: paymentPortion,
+        paymentAmount:
+          paymentPortion === "Advance Payment" ||
+          paymentPortion === "Credit Payment"
+            ? paymentPortionAmount
+            : total + deliveryfee,
+
+        business: companyMetaCli?.businessName as string,
+        branch: session?.user.branch,
+        address: branchDetails?.address as string,
+        hotlines: branchDetails?.hotlines as string[],
+        operator: session?.user.id,
+        counterNo: session?.user.counterNo,
+
+        //this data get only for sheet not the invoice
+        customer: "x",
+        customerMobile: "x",
+        customerCreatedAt: new Date().toISOString(),
+      },
+      items: revItems,
+    };
+
+    await addToQueue({
+      id: nanoid(),
+      edit: orderType?.editMode as boolean,
+      payload: data,
+      createdAt: new Date().toISOString(),
+    });
+
+    // full clent side billing data process end ------------------------
+
     try {
-      const res = await BasicDataFetch({
-        // Added await here
-        method: orderType?.editMode ? "PUT" : "POST",
-        endpoint: "/api/orders",
-        data: data,
-      });
+      // const res = await BasicDataFetch({
+      //   // Added await here
+      //   method: orderType?.editMode ? "PUT" : "POST",
+      //   endpoint: "/api/orders",
+      //   data: data,
+      // });
 
       const end = performance.now();
       const responseTimeMs = end - start;
@@ -253,13 +395,28 @@ const CartCard = () => {
           queryKey: ["invoice", orderType.lastOrderId],
         });
       } else {
-        const ebillData = defaultPrint ? res.data.baseData : res.data;
+        //update cache
+        const next = Number(nextInvoiceIdSuffix) + 1;
+        const finalNext = next.toString();
+        await cachedb.client.update(clientPrimaryKey, {
+          nextInvoiceIdSuffix: finalNext,
+        });
 
-        await updateLastEbillId(ebillData.id);
-        await refreshLastEbill();
+        //update state of nextid
+        queryClient.setQueryData(["next-invoice-id"], finalNext);
+
+        //  const ebillData = defaultPrint ? dataCli.baseData : dataCli;
+        // const ebillData = defaultPrint ? res.data.baseData : res.data;
+        // await updateLastEbillId(ebillData.id);
+
+        const ebillId = dataCli.baseData.id;
+        //handle with queue cache
+        // await updateLastEbillId(ebillId);
+
+        // await refreshLastEbill();
 
         if (defaultPrint) {
-          setInvoiceData(res.data);
+          setInvoiceData(dataCli);
           //...
         }
 
@@ -277,7 +434,9 @@ const CartCard = () => {
       // setPaymentPortion("Full Payment");
       // setPaymentPortionAmount(0);
       // res already contains parsed JSON from BasicDataFetch
-      toast.success(`${res.message} in ${(responseTimeMs / 1000).toFixed(2)}s`);
+
+      // toast.success(`${res.message} in ${(responseTimeMs / 1000).toFixed(2)}s`);
+      toast.success(`Order filled in ${(responseTimeMs / 1000).toFixed(2)}s`);
 
       playMusic("/sounds/paid.mp3");
     } catch (err) {
@@ -350,7 +509,8 @@ const CartCard = () => {
           {payOptions.map((opt, index) => (
             <Button
               onClick={() => {
-                if (activeOption !== opt.name) setActiveOption(opt.name);
+                if (activeOption !== opt.name)
+                  setActiveOption(opt.name as TPaymentMethod);
                 if (opt.name === "Credit") {
                   setPaymentPortionAmount(0);
                   setPaymentPortion("Credit Payment");
@@ -398,7 +558,7 @@ const CartCard = () => {
                   onChange={(e) => {
                     const value = e.target.value;
                     setPaymentPortionAmount(
-                      value === "" ? 0 : parseFloat(value)
+                      value === "" ? 0 : parseFloat(value),
                     );
                   }}
                 />

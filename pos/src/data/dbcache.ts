@@ -17,9 +17,10 @@ import {
   IPriceVarient,
   IProductMeta,
   IProductVarient,
+  IQueue,
   IStaff,
 } from "@/data";
-import { focusBarcode, getVariationName } from "@/utils/common";
+import { BasicDataFetch, focusBarcode, getVariationName } from "@/utils/common";
 
 import { Dexie, Table } from "dexie";
 import React from "react";
@@ -41,6 +42,7 @@ declare module "dexie" {
     cartItem: Table<ICartItem, number>;
     holdedCartItem: Table<IHoldedCartItem, number>;
     currentCustomer: Table<ICurrentCustomer, number>;
+    queue: Table<IQueue, string>;
   }
 }
 
@@ -60,12 +62,13 @@ cachedb
     businessMeta:
       "id,businessName,businessLogo,ownerName,ownerMobileNos,categories,sms",
     client:
-      "id,lastProductFetch,lastOrderId,editMode,edCustomerMobile,edCustomerPaymentMethod,edDeliveryfee,edPaymentPortion",
+      "id,lastProductFetch,lastOrderId,editMode,edCustomerMobile,edCustomerPaymentMethod,edDeliveryfee,edPaymentPortion,nextInvoiceIdSuffix",
     cartItem:
       "++id,name,variationName,priceVariation,image,productVarientId,unitPrice,quantity",
     holdedCartItem:
       "++id,customerMobile,time,cartId,name,variationName,priceVariation,image,productVarientId,unitPrice,quantity",
     currentCustomer: "id,name,mobile",
+    queue: "id,payload,edit,createdAt",
   })
   .upgrade(async (tx) => {
     const tablesToClear = [
@@ -83,6 +86,7 @@ cachedb
       "cartItem",
       "holdedCartItem",
       "currentCustomer",
+      "queue",
     ];
 
     for (const tableName of tablesToClear) {
@@ -108,12 +112,54 @@ export async function ensureClientInit() {
       edDeliveryfee: null, //new Prisma.Decimal(50),
       edPaymentPortion: "Full Payment",
       edPaymentPortionAmount: null,
+      nextInvoiceIdSuffix: "notset",
     });
   }
 }
 
-export async function getBusinessMeta() {
-  return await cachedb.businessMeta.toCollection().first();
+export async function ensureBusinessInit(): Promise<IBusinessMeta> {
+  const exists = await getBusinessMeta();
+
+  if (exists) return exists;
+
+  const response = await BasicDataFetch({
+    method: "GET",
+    endpoint: "/api/company/meta",
+  });
+
+  // Upsert / overwrite cachedb
+  await cachedb.businessMeta.put(response.data);
+
+  // Fetch again, guaranteed to exist
+  const fresh = await getBusinessMeta();
+  if (!fresh) throw new Error("Failed to fetch business meta after init");
+
+  return fresh;
+}
+
+export async function getBusinessMeta(): Promise<IBusinessMeta | undefined> {
+  return cachedb.businessMeta.toCollection().first();
+}
+
+export async function ensureBranchesInit() {
+  const exists = await getBranchesMeta();
+
+  // Only return if data exists
+  if (exists.length > 0) return exists;
+
+  const response = await BasicDataFetch({
+    method: "GET",
+    endpoint: "/api/company/branch",
+  });
+
+  // Save all branches
+  await cachedb.branchMeta.bulkPut(response.data);
+
+  return await getBranchesMeta();
+}
+
+export async function getBranchesMeta() {
+  return cachedb.branchMeta.toArray();
 }
 
 export async function saveCategory(categories: string[], kind: CategoryType) {
@@ -139,7 +185,7 @@ export async function saveCategory(categories: string[], kind: CategoryType) {
       const orderedCategories = [
         "All",
         ...categories.filter(
-          (c) => c.toLowerCase() !== "all" && c.toLowerCase() !== "temporary"
+          (c) => c.toLowerCase() !== "all" && c.toLowerCase() !== "temporary",
         ),
         "Temporary",
       ];
@@ -176,7 +222,7 @@ export async function removeCategory(category: string, kind: CategoryType) {
   switch (kind) {
     case "income": {
       const updated = meta.incomeCategories.filter(
-        (c) => c.toLowerCase() !== category.toLowerCase()
+        (c) => c.toLowerCase() !== category.toLowerCase(),
       );
 
       await cachedb.businessMeta.update(meta.id!, {
@@ -187,7 +233,7 @@ export async function removeCategory(category: string, kind: CategoryType) {
 
     case "expense": {
       const updated = meta.expenseCategories.filter(
-        (c) => c.toLowerCase() !== category.toLowerCase()
+        (c) => c.toLowerCase() !== category.toLowerCase(),
       );
 
       await cachedb.businessMeta.update(meta.id!, {
@@ -198,7 +244,7 @@ export async function removeCategory(category: string, kind: CategoryType) {
 
     case "product": {
       const updated = meta.categories.filter(
-        (c) => c.toLowerCase() !== category.toLowerCase()
+        (c) => c.toLowerCase() !== category.toLowerCase(),
       );
 
       await cachedb.businessMeta.update(meta.id!, {
@@ -290,7 +336,7 @@ export async function getCacheProductsWithVariants(): Promise<{
         varients.length > 0 ? new Date(varients[0].createdAt).getTime() : 0;
 
       return { ...product, varients, latestVarientDate };
-    })
+    }),
   );
 
   // Sort products by latest variant date (descending)
@@ -315,7 +361,7 @@ export async function saveAllProductWithVariants({
       // Use bulkPut to add or update records
       await cachedb.productMeta.bulkPut(data.productsMeta);
       await cachedb.productVarient.bulkPut(data.productsVarients);
-    }
+    },
   );
 
   // Update timestamp without wiping DB
@@ -330,11 +376,12 @@ export async function saveAllProductWithVariants({
     edDeliveryfee: null,
     edPaymentPortion: "Full Payment",
     edPaymentPortionAmount: null,
+    nextInvoiceIdSuffix: "notset",
   });
 }
 
 export async function updateBaseDataOfProduct(
-  data: IProductMeta & { id: string }
+  data: IProductMeta & { id: string },
 ) {
   return await cachedb.productMeta.where("id").equals(data.id).modify({
     name: data.name,
@@ -420,7 +467,7 @@ export async function getCacheProductMetaOnlyByBarcode(input: string) {
 
 export async function addtoCacheCart(
   variations: ISelectedVariation[],
-  edit: boolean = false
+  edit: boolean = false,
 ) {
   let addedCount = 0; // track how many items got added
 
@@ -440,14 +487,14 @@ export async function addtoCacheCart(
           React.createElement(
             "span",
             { className: "font-semibold", key: "1" },
-            "Product Already Added"
+            "Product Already Added",
           ),
           React.createElement(
             "span",
             { className: "text-[11px] text-muted-foreground", key: "2" },
-            `Variant ID - ${variationId}`
+            `Variant ID - ${variationId}`,
           ),
-        ])
+        ]),
       );
       continue;
     }
@@ -482,7 +529,7 @@ export async function addtoCacheCart(
   // show success only if at least one was added
   if (addedCount > 0 && !edit) {
     toast.success(
-      `${addedCount} Product${addedCount > 1 ? "s" : ""} Added Successfully`
+      `${addedCount} Product${addedCount > 1 ? "s" : ""} Added Successfully`,
     );
   }
   focusBarcode();
@@ -514,7 +561,7 @@ export function transformCartData(products: ICartItem[]): IGroupedCart[] {
 }
 export async function updateCacheCartQuantity(
   productVarientId: string,
-  quantity: number
+  quantity: number,
 ) {
   return await cachedb.cartItem
     .where("productVarientId")
@@ -524,7 +571,7 @@ export async function updateCacheCartQuantity(
 
 export async function updateCacheCartUnitPrice(
   productVarientId: string,
-  unitPrice: number
+  unitPrice: number,
 ) {
   return await cachedb.cartItem
     .where("productVarientId")
@@ -534,7 +581,7 @@ export async function updateCacheCartUnitPrice(
 
 export async function addNewProductPriceToTheVarientWithInCart(
   vid: string,
-  priceSet: IPriceVarient
+  priceSet: IPriceVarient,
 ) {
   const cleanPrice = {
     set: Number(priceSet.set),
@@ -578,7 +625,7 @@ export async function removeAllFromCacheCart() {
   });
   await setCurrentCustomer(
     globalDefaultCustomer.name,
-    globalDefaultCustomer.mobile
+    globalDefaultCustomer.mobile,
   );
   focusBarcode();
 }
@@ -669,7 +716,7 @@ export async function getAllHeldCartsMeta() {
 
 export async function switchHeldtoCurrentCart(
   customerMobile: string,
-  time: string
+  time: string,
 ) {
   // Step 1: clear the current cart
   await removeAllFromCacheCart();
@@ -720,7 +767,7 @@ export async function editInvoice(data: any) {
 
   await setCurrentCustomer(
     data.baseData.customer,
-    data.baseData.customerMobile
+    data.baseData.customerMobile,
   );
 
   await cachedb.client.update(clientPrimaryKey, {
@@ -750,7 +797,7 @@ export async function editInvoice(data: any) {
       quantity: v.quantity,
       prices: await getPrices(v.id), // fetch cached price
       // Note: sellingPrice is handled separately
-    }))
+    })),
   );
 
   // Step 5: Add each variation to cache and update unit price
@@ -762,9 +809,9 @@ export async function editInvoice(data: any) {
       // Update the unit price using sellingPrice from original variations array
       await updateCacheCartUnitPrice(
         item.variationId,
-        variations[index].sellingPrice
+        variations[index].sellingPrice,
       );
-    })
+    }),
   );
   toast.success(`Cart Filled with Invoice No ${data.baseData.invoiceId} Items`);
 }
@@ -805,6 +852,53 @@ export async function getExportReadyCacheCart() {
     unitPrice,
     quantity,
   }));
+}
+
+export async function getReverseExportFormat() {
+  // Step 1: get cart items
+  const cartItems = await getExportReadyCacheCart();
+
+  // Step 2: get all metas & variations (cached, fast)
+  const productMetas = await cachedb.productMeta.toArray();
+  const productVariations = await cachedb.productVarient.toArray();
+
+  // Step 3: build lookup maps
+  const variationMap = new Map(productVariations.map((v) => [v.id, v]));
+
+  const metaMap = new Map(productMetas.map((m) => [m.id, m]));
+
+  // Step 4: group by productMeta
+  const resultMap = new Map<string, any>();
+
+  for (const item of cartItems) {
+    const variation = variationMap.get(item.productVarientId);
+    if (!variation) continue;
+
+    const meta = metaMap.get(variation.metaId);
+    if (!meta) continue;
+
+    // create meta group if not exists
+    if (!resultMap.has(meta.id as string)) {
+      resultMap.set(meta.id as string, {
+        metaId: meta.id,
+        name: meta.name,
+        metric: meta.metric ?? "None",
+        variations: [],
+      });
+    }
+
+    resultMap.get(meta.id as string).variations.push({
+      id: variation.id,
+      variation: variation.variation ?? null,
+      // regularPrice: variation.prices[0].reg,
+      regularPrice: variation.prices.find((i) => i.sel === item.unitPrice)?.reg,
+      sellingPrice: item.unitPrice,
+      quantity: item.quantity,
+    });
+  }
+
+  // Step 5: return as array
+  return Array.from(resultMap.values());
 }
 
 export async function getLastEbillId() {

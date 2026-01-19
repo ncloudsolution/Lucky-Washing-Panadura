@@ -84,8 +84,6 @@ export function OrderSheet({ id }: { id: string }) {
 
   const queryClient = useQueryClient();
 
-  console.log(session?.user.role);
-
   const [date, time] = formatDate(invoiceData?.baseData.customerCreatedAt);
   return (
     <Sheet open={open} onOpenChange={setOpen}>
@@ -143,7 +141,7 @@ export function OrderSheet({ id }: { id: string }) {
                 if (!pay?.createdAt) return null;
 
                 const [date, time] = formatDate(
-                  new Date(pay.createdAt).toLocaleString()
+                  new Date(pay.createdAt).toLocaleString(),
                 );
 
                 return (
@@ -199,14 +197,14 @@ export function OrderSheet({ id }: { id: string }) {
                                         oldData?.data ?? [];
 
                                       const filterd = oldArray.filter(
-                                        (i) => i.id !== pay.id
+                                        (i) => i.id !== pay.id,
                                       );
 
                                       return {
                                         ...oldData,
                                         data: filterd,
                                       };
-                                    }
+                                    },
                                   );
 
                                   toast.success(res.message);

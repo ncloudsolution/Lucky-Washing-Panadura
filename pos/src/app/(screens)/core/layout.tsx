@@ -1,10 +1,6 @@
 import { cookies } from "next/headers";
 
-import {
-  SidebarProvider,
-  SidebarTrigger,
-  useSidebar,
-} from "@/components/ui/sidebar";
+import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/custom/cards/AppSideBar";
 import TopCard from "@/components/custom/cards/TopCard";
 import { auth } from "@/auth";

@@ -12,6 +12,10 @@ import {
   ensureClientInit,
   getBusinessMeta,
   saveCategory,
+  cachedb,
+  clientPrimaryKey,
+  ensureBusinessInit,
+  ensureBranchesInit,
 } from "@/data/dbcache";
 
 import NoRecordsCard from "@/components/custom/cards/NoRecordsCard";
@@ -34,6 +38,12 @@ function PosWindow() {
       queryKey: ["categories"],
       queryFn: async () => {
         await ensureClientInit();
+
+        async function initX() {
+          await ensureBusinessInit();
+          await ensureBranchesInit();
+        }
+        initX();
 
         // 1️⃣ Try cache
         const meta = await getBusinessMeta();
@@ -58,6 +68,7 @@ function PosWindow() {
     });
 
   /* ---------------- Category Objects ---------------- */
+
   const FinalCategoryItems = useMemo(() => {
     return CategoryArray.map((name, index) => ({
       id: index === 0 ? "0" : name.toLowerCase().replace(/\s+/g, "-"),
@@ -104,7 +115,7 @@ function PosWindow() {
   const baseProducts = filteredProducts === null ? products : filteredProducts;
 
   const selectedCategory = FinalCategoryItems.find(
-    (c) => c.id === selectedCategoryId
+    (c) => c.id === selectedCategoryId,
   );
 
   const displayProducts =
@@ -112,8 +123,9 @@ function PosWindow() {
       ? baseProducts
       : baseProducts?.filter((product) =>
           product.categories?.some(
-            (cat) => cat.toLowerCase() === selectedCategory?.name?.toLowerCase()
-          )
+            (cat) =>
+              cat.toLowerCase() === selectedCategory?.name?.toLowerCase(),
+          ),
         );
 
   const { isFullscreen } = useFullscreen();

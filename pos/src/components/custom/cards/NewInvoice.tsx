@@ -13,13 +13,13 @@ import { singlishToUnicode } from "sinhala-unicode-coverter";
 export interface IInvoice {
   baseData: {
     id: string;
-    invoiceId: number;
+    invoiceId: string;
     createdAt: string;
     saleValue: number;
     deliveryfee: number | null;
     paymentMethod: TPaymentMethod;
     paymentAmount: number;
-    incomeCategory: number;
+    incomeCategory: string;
     status: TOrderStatus;
     business: string;
     branch: string;
@@ -141,9 +141,11 @@ const NewInvoice = ({
         <CardDescription className="print:text-primary print:text-xs text-center">
           {data.baseData.address}
         </CardDescription>
-        <CardDescription className="text-primary">
-          {data.baseData.hotlines.join(", ")}
-        </CardDescription>
+        {data.baseData.hotlines && (
+          <CardDescription className="text-primary">
+            {data.baseData.hotlines.join(", ")}
+          </CardDescription>
+        )}
       </div>
       <div className="w-full h-[2px] bg-primary" />
 

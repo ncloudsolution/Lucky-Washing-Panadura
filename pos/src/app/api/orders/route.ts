@@ -4,14 +4,13 @@ import {
   defaultPrint,
   globalDefaultCustomer,
   IOrderItem,
-  IOrderMeta,
   TMetric,
 } from "@/data";
 import { hasPermission, T_Role } from "@/data/permissions";
 import prisma from "@/prisma/client";
-import { BasicDataFetch, EbillMsg } from "@/utils/common";
+import { EbillMsg } from "@/utils/common";
 import { Prisma } from "@prisma/client";
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 
 //add order
 export const POST = auth(async function POST(req: any) {
@@ -27,7 +26,7 @@ export const POST = auth(async function POST(req: any) {
           message: "No order items found on this order",
           error: "NOT FOUND",
         },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -38,7 +37,7 @@ export const POST = auth(async function POST(req: any) {
           message: "You are not authenticated",
           error: "UNAUTHORIZED",
         },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -52,7 +51,7 @@ export const POST = auth(async function POST(req: any) {
     ) {
       return NextResponse.json(
         { success: false, message: "Not authorized" },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
@@ -68,7 +67,7 @@ export const POST = auth(async function POST(req: any) {
           success: false,
           message: "Cannot find customer related to this order",
         },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -107,7 +106,7 @@ export const POST = auth(async function POST(req: any) {
       },
       {
         timeout: 5000, // 🔐 VERY IMPORTANT
-      }
+      },
     );
 
     /* ---------------- AFTER TRANSACTION ---------------- */
@@ -166,12 +165,12 @@ export const POST = auth(async function POST(req: any) {
 
       const groupedItems = productVariants.reduce((acc: any[], v: any) => {
         const orderItem = orderItems.find(
-          (o: any) => o.productVarientId === v.id
+          (o: any) => o.productVarientId === v.id,
         );
         if (!orderItem) return acc;
 
         const price = v.prices?.find(
-          (p: any) => p.sel === Number(orderItem.unitPrice)
+          (p: any) => p.sel === Number(orderItem.unitPrice),
         );
 
         const variation = {
@@ -207,7 +206,7 @@ export const POST = auth(async function POST(req: any) {
 
           paymentAmount: paymentDetails?.reduce(
             (sum, item) => sum.plus(item.amount),
-            new Prisma.Decimal(0)
+            new Prisma.Decimal(0),
           ),
           //catergory and method always in ebill and printed show the first time payment mode and catgory but the amount get the total of all related orer id
           incomeCategory: paymentDetails[0]?.category,
@@ -232,12 +231,12 @@ export const POST = auth(async function POST(req: any) {
         message: "Order created successfully",
         data: defaultPrint ? invoiceData : newOrder,
       },
-      { status: 201 }
+      { status: 201 },
     );
   } catch (err) {
     return NextResponse.json(
       { success: false, message: "Check your connection and try again" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }) as (req: Request) => Promise<Response>;
@@ -256,7 +255,7 @@ export const PUT = auth(async function PUT(req: any) {
           message: "You are not authenticated",
           error: "UNAUTHORIZED",
         },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -273,7 +272,7 @@ export const PUT = auth(async function PUT(req: any) {
     ) {
       return NextResponse.json(
         { success: false, message: "Not authorized" },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
@@ -286,7 +285,7 @@ export const PUT = auth(async function PUT(req: any) {
     if (currentOrder?.operator !== authId) {
       return NextResponse.json(
         { success: false, message: "Not authorized" },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
@@ -307,24 +306,24 @@ export const PUT = auth(async function PUT(req: any) {
     // Common productVariantIds
     const commonItems = newItems.filter((newItem) =>
       oldItems.some(
-        (oldItem) => oldItem.productVarientId === newItem.productVarientId
-      )
+        (oldItem) => oldItem.productVarientId === newItem.productVarientId,
+      ),
     );
 
     // Newly added items
     const newOnlyItems = newItems.filter(
       (newItem) =>
         !oldItems.some(
-          (oldItem) => oldItem.productVarientId === newItem.productVarientId
-        )
+          (oldItem) => oldItem.productVarientId === newItem.productVarientId,
+        ),
     );
 
     // Removed items
     const removedItems = oldItems.filter(
       (oldItem) =>
         !newItems.some(
-          (newItem) => newItem.productVarientId === oldItem.productVarientId
-        )
+          (newItem) => newItem.productVarientId === oldItem.productVarientId,
+        ),
     );
 
     // return NextResponse.json(
@@ -392,8 +391,8 @@ export const PUT = auth(async function PUT(req: any) {
                 data: {
                   quantity: item.quantity,
                 },
-              })
-            )
+              }),
+            ),
           );
         }
 
@@ -433,7 +432,7 @@ export const PUT = auth(async function PUT(req: any) {
             data: updateData,
           });
         }
-      }
+      },
     );
 
     return NextResponse.json(
@@ -442,12 +441,12 @@ export const PUT = auth(async function PUT(req: any) {
         message: "Order updated successfully",
         data: null,
       },
-      { status: 200 }
+      { status: 200 },
     );
   } catch (err) {
     return NextResponse.json(
       { success: false, message: "Internal Server Error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 });
@@ -480,7 +479,7 @@ export const GET = auth(async function GET(req: any) {
             data: null,
             error: "INVALID OPERATION",
           },
-          { status: 400 }
+          { status: 400 },
         );
       }
       try {
@@ -508,7 +507,7 @@ export const GET = auth(async function GET(req: any) {
               message: "This order does not exist",
               error: "NOT FOUND",
             },
-            { status: 404 }
+            { status: 404 },
           );
         }
         return NextResponse.json(
@@ -517,7 +516,7 @@ export const GET = auth(async function GET(req: any) {
             message: "Order Payment Breakdown fetched successfully!",
             data: breakdowns,
           },
-          { status: 200 }
+          { status: 200 },
         );
       } catch (e) {
         return NextResponse.json(
@@ -527,7 +526,7 @@ export const GET = auth(async function GET(req: any) {
             message: "An error occurred while processing your request",
             error: e instanceof Error ? e.message : String(e),
           },
-          { status: 500 }
+          { status: 500 },
         );
       }
     }
@@ -543,7 +542,7 @@ export const GET = auth(async function GET(req: any) {
             data: null,
             error: "INVALID OPERATION",
           },
-          { status: 400 }
+          { status: 400 },
         );
       }
 
@@ -561,7 +560,7 @@ export const GET = auth(async function GET(req: any) {
               message: "This order does not exist",
               error: "NOT FOUND",
             },
-            { status: 404 }
+            { status: 404 },
           );
         }
 
@@ -577,7 +576,7 @@ export const GET = auth(async function GET(req: any) {
               message: "This order does not exist",
               error: "NOT FOUND",
             },
-            { status: 404 }
+            { status: 404 },
           );
         }
 
@@ -630,10 +629,10 @@ export const GET = auth(async function GET(req: any) {
             {
               productMeta,
               ...variant
-            }: { productMeta: any; [key: string]: any }
+            }: { productMeta: any; [key: string]: any },
           ) => {
             const orderItem = orderItems.find(
-              (item: any) => item.productVarientId === variant.id
+              (item: any) => item.productVarientId === variant.id,
             );
 
             if (!orderItem) return acc; // skip if no matching order item
@@ -643,7 +642,7 @@ export const GET = auth(async function GET(req: any) {
               (variant.prices as { reg: number; sel: number; set: number }[]) ??
               [];
             const matchingPrice = prices.find(
-              (p) => p.sel === Number(orderItem.unitPrice)
+              (p) => p.sel === Number(orderItem.unitPrice),
             );
 
             const variationItem = {
@@ -658,7 +657,7 @@ export const GET = auth(async function GET(req: any) {
 
             // Check if group already exists
             const existingGroup = acc.find(
-              (g: any) => g.metaId === variant.metaId
+              (g: any) => g.metaId === variant.metaId,
             );
             if (existingGroup) {
               existingGroup.variations.push(variationItem);
@@ -684,7 +683,7 @@ export const GET = auth(async function GET(req: any) {
               sellingPrice: number;
               quantity: number;
             }[];
-          }[]
+          }[],
         );
 
         const orderData = {
@@ -698,7 +697,7 @@ export const GET = auth(async function GET(req: any) {
 
             paymentAmount: paymentDetails?.reduce(
               (sum, item) => sum.plus(item.amount),
-              new Prisma.Decimal(0)
+              new Prisma.Decimal(0),
             ),
             //catergory and method always in ebill and printed show the first time payment mode and catgory but the amount get the total of all related orer id
             incomeCategory: paymentDetails[0]?.category,
@@ -724,7 +723,7 @@ export const GET = auth(async function GET(req: any) {
             message: "Order fetched successfully!",
             data: orderData,
           },
-          { status: 200 }
+          { status: 200 },
         );
       } catch (e) {
         return NextResponse.json(
@@ -734,7 +733,7 @@ export const GET = auth(async function GET(req: any) {
             message: "An error occurred while processing your request",
             error: e instanceof Error ? e.message : String(e),
           },
-          { status: 500 }
+          { status: 500 },
         );
       }
     }
@@ -749,7 +748,7 @@ export const GET = auth(async function GET(req: any) {
             message: "You are not authenticated",
             error: "UNAUTHORIZED",
           },
-          { status: 401 }
+          { status: 401 },
         );
       }
 
@@ -761,7 +760,7 @@ export const GET = auth(async function GET(req: any) {
       ) {
         return NextResponse.json(
           { success: false, message: "Not authorized" },
-          { status: 403 }
+          { status: 403 },
         );
       }
 
@@ -775,7 +774,8 @@ export const GET = auth(async function GET(req: any) {
       if (isNumeric) {
         try {
           // Use BigInt for invoiceId to handle large numbers
-          const invoiceId = Number(cleanSearch);
+          // const invoiceId = Number(cleanSearch);
+          const invoiceId = cleanSearch;
 
           // Search by invoiceId first
           orderMetas = await prisma.orderMeta.findMany({
@@ -806,7 +806,7 @@ export const GET = auth(async function GET(req: any) {
               message: "Invalid search input — no digits found",
               data: [],
             },
-            { status: 200 }
+            { status: 200 },
           );
         }
 
@@ -837,7 +837,7 @@ export const GET = auth(async function GET(req: any) {
       const ordersWithIncomeSum = orderMetas.map((order) => {
         const totalIncome = order.incomes.reduce(
           (sum, inc) => sum + Number(inc.amount),
-          0
+          0,
         );
 
         return {
@@ -852,7 +852,7 @@ export const GET = auth(async function GET(req: any) {
           message: "Order history fetch successfully!",
           data: ordersWithIncomeSum,
         },
-        { status: 200 }
+        { status: 200 },
       );
     }
 
@@ -866,7 +866,7 @@ export const GET = auth(async function GET(req: any) {
             message: "You are not authenticated",
             error: "UNAUTHORIZED",
           },
-          { status: 401 }
+          { status: 401 },
         );
       }
 
@@ -878,7 +878,7 @@ export const GET = auth(async function GET(req: any) {
       ) {
         return NextResponse.json(
           { success: false, message: "Not authorized" },
-          { status: 403 }
+          { status: 403 },
         );
       }
 
@@ -887,8 +887,8 @@ export const GET = auth(async function GET(req: any) {
           authRole === "cashier"
             ? { operator: authId }
             : authRole === "manager"
-            ? { branch: authBranch }
-            : {},
+              ? { branch: authBranch }
+              : {},
         orderBy: {
           createdAt: "desc",
         },
@@ -905,7 +905,7 @@ export const GET = auth(async function GET(req: any) {
       const ordersWithIncomeSum = orderMetas.map((order) => {
         const totalIncome = order.incomes.reduce(
           (sum, inc) => sum + Number(inc.amount),
-          0
+          0,
         );
 
         return {
@@ -920,7 +920,7 @@ export const GET = auth(async function GET(req: any) {
           message: "Recent orders fetch successfully!",
           data: ordersWithIncomeSum,
         },
-        { status: 200 }
+        { status: 200 },
       );
     }
   }
