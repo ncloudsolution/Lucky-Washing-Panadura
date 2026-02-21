@@ -212,6 +212,7 @@ export const productData = {
     mobile: [""],
     email: "",
     web: "https://www.upos.lk",
+    shortweb: "upos.lk",
     facebook: "",
     whatsapp: "",
     address: "Horana, Padukka, Sri Lanka",
