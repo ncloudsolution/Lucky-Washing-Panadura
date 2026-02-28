@@ -317,9 +317,16 @@ const ModInvoice = ({
         </div>
 
         <div className="flex flex-col items-center pt-3">
-          <div>
-            {data.baseData.business} - {data.baseData.branch}
-          </div>
+          {data.baseData.hotlines && (
+            <CardDescription className="text-primary font-semibold text-[18px] leading-[24px]">
+              {data.baseData.hotlines.join(", ")}
+            </CardDescription>
+          )}
+          <CardDescription className="print:text-primary text-[12px] text-center">
+            {data.baseData.business} - {data.baseData.address}
+            {/* - {data.baseData.branch} */}
+          </CardDescription>
+
           {/* <div>Thank you come again</div> */}
           <div className="flex gap-1.5">
             Powerd by
