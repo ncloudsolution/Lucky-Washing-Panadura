@@ -64,6 +64,7 @@ import { nanoid } from "nanoid";
 import { useReactToPrint } from "react-to-print";
 import NewInvoice, { IInvoice } from "./NewInvoice";
 import { addToQueue } from "@/data/queue";
+import ModInvoice from "./ModInvoice";
 
 const CartCard = () => {
   const queryClient = useQueryClient();
@@ -634,7 +635,7 @@ const CartCard = () => {
           <div className="relative">
             <div className="z-20 absolute right-5 top-5 rounded-full size-[20px] bg-superbase shadow-md" />
             <div ref={contentRef}>
-              <NewInvoice data={invoiceData} />
+              <ModInvoice data={invoiceData} />
             </div>
           </div>
         </div>

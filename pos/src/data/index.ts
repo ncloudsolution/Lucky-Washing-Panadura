@@ -6,7 +6,7 @@ import { BankDetailsCard } from "@/components/custom/cards/BankDetailsCard";
 export const devMode = false;
 export const BaseUrl = devMode
   ? "http://localhost:3000"
-  : "https://lucky-washing-panadura.vercel.app/";
+  : "https://lucky-washing-panadura.vercel.app";
 
 export const globalDefaultCustomer = {
   enable: true,
