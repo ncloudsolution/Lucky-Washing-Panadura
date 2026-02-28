@@ -2,12 +2,20 @@ import { auth } from "@/auth";
 import { BranchSummary } from "@/data";
 import { hasPermission, T_Role } from "@/data/permissions";
 import prisma from "@/prisma/client";
-import { getDateRange } from "@/utils/common";
+import { getDateRange, getNewDateRange } from "@/utils/common";
 import { NextResponse } from "next/server";
 
 export const GET = auth(async function GET(req: any) {
   const { searchParams } = new URL(req.url);
-  const timeFrame = searchParams.get("timeframe");
+  // const timeFrame = searchParams.get("timeframe");
+
+  const fromParam = searchParams.get("from");
+  const toParam = searchParams.get("to");
+
+  const dateRange = {
+    from: fromParam ? new Date(fromParam) : undefined,
+    to: toParam ? new Date(toParam) : undefined,
+  };
 
   const authRole = req.auth?.user?.role?.toLowerCase() as T_Role;
   const authBranch = req.auth?.user?.branch;
@@ -22,7 +30,7 @@ export const GET = auth(async function GET(req: any) {
         message: "you are not authenticated",
         error: "UNAUTHORIZED",
       },
-      { status: 401 }
+      { status: 401 },
     );
   }
 
@@ -36,7 +44,7 @@ export const GET = auth(async function GET(req: any) {
     ) {
       return NextResponse.json(
         { success: false, message: "Not authorized" },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
@@ -48,7 +56,7 @@ export const GET = auth(async function GET(req: any) {
 
     const orders = await prisma.orderMeta.findMany({
       where: {
-        createdAt: { gte: getDateRange(timeFrame) },
+        createdAt: getNewDateRange(dateRange),
         ...(authRole !== "director" && { branch: authBranch }),
       },
       select: {
@@ -61,7 +69,7 @@ export const GET = auth(async function GET(req: any) {
 
     const income = await prisma.income.findMany({
       where: {
-        createdAt: { gte: getDateRange(timeFrame) },
+        createdAt: getNewDateRange(dateRange),
       },
       select: {
         paymentMethod: true,
@@ -84,22 +92,25 @@ export const GET = auth(async function GET(req: any) {
         amount: Number(i.amount),
       }));
 
-    const groupedByBranch = formattedIncome.reduce((acc, curr) => {
-      const branchName = curr.branch;
-      if (!acc[branchName]) {
-        acc[branchName] = {};
-      }
+    const groupedByBranch = formattedIncome.reduce(
+      (acc, curr) => {
+        const branchName = curr.branch;
+        if (!acc[branchName]) {
+          acc[branchName] = {};
+        }
 
-      const pm = curr.paymentMethod;
-      if (!acc[branchName][pm]) {
-        acc[branchName][pm] = { count: 0, amount: 0 };
-      }
+        const pm = curr.paymentMethod;
+        if (!acc[branchName][pm]) {
+          acc[branchName][pm] = { count: 0, amount: 0 };
+        }
 
-      acc[branchName][pm].count += 1;
-      acc[branchName][pm].amount += curr.amount;
+        acc[branchName][pm].count += 1;
+        acc[branchName][pm].amount += curr.amount;
 
-      return acc;
-    }, {} as Record<string, Record<string, { count: number; amount: number }>>);
+        return acc;
+      },
+      {} as Record<string, Record<string, { count: number; amount: number }>>,
+    );
 
     // Step 4: Convert to your desired array format
     const incomeResult = Object.entries(groupedByBranch).map(
@@ -110,7 +121,7 @@ export const GET = auth(async function GET(req: any) {
           count: data.count,
           amount: data.amount,
         })),
-      })
+      }),
     );
 
     // Step 5: Add "All Branches" summary
@@ -139,7 +150,7 @@ export const GET = auth(async function GET(req: any) {
 
     const expense = await prisma.expense.findMany({
       where: {
-        createdAt: { gte: getDateRange(timeFrame) },
+        createdAt: getNewDateRange(dateRange),
         ...(authRole !== "director" && { branch: authBranch }),
       },
       select: {
@@ -158,22 +169,25 @@ export const GET = auth(async function GET(req: any) {
         amount: Number(i.amount),
       }));
 
-    const groupedByBranchExp = formattedExpense.reduce((acc, curr) => {
-      const branchName = curr.branch;
-      if (!acc[branchName]) {
-        acc[branchName] = {};
-      }
+    const groupedByBranchExp = formattedExpense.reduce(
+      (acc, curr) => {
+        const branchName = curr.branch;
+        if (!acc[branchName]) {
+          acc[branchName] = {};
+        }
 
-      const pm = curr.paymentMethod;
-      if (!acc[branchName][pm]) {
-        acc[branchName][pm] = { count: 0, amount: 0 };
-      }
+        const pm = curr.paymentMethod;
+        if (!acc[branchName][pm]) {
+          acc[branchName][pm] = { count: 0, amount: 0 };
+        }
 
-      acc[branchName][pm].count += 1;
-      acc[branchName][pm].amount += curr.amount;
+        acc[branchName][pm].count += 1;
+        acc[branchName][pm].amount += curr.amount;
 
-      return acc;
-    }, {} as Record<string, Record<string, { count: number; amount: number }>>);
+        return acc;
+      },
+      {} as Record<string, Record<string, { count: number; amount: number }>>,
+    );
 
     // Step 4: Convert to your desired array format
     const expenseResult = Object.entries(groupedByBranchExp).map(
@@ -184,7 +198,7 @@ export const GET = auth(async function GET(req: any) {
           count: data.count,
           amount: data.amount,
         })),
-      })
+      }),
     );
 
     // Step 5: Add "All Branches" summary
@@ -239,7 +253,7 @@ export const GET = auth(async function GET(req: any) {
 
     for (let i = 0; i < orders.length; i++) {
       const branchObj = initialArray.find(
-        (x) => x.branch === orders[i].branch
+        (x) => x.branch === orders[i].branch,
       )!;
       branchObj.totalCount += 1;
       branchObj.totalSaleValue += Number(orders[i].saleValue);
@@ -260,26 +274,29 @@ export const GET = auth(async function GET(req: any) {
       },
     });
 
-    const grouped = itemsWithBranch.reduce((acc, item) => {
-      const branch = item.order.branch;
+    const grouped = itemsWithBranch.reduce(
+      (acc, item) => {
+        const branch = item.order.branch;
 
-      if (!acc[branch]) acc[branch] = [];
+        if (!acc[branch]) acc[branch] = [];
 
-      const existing = acc[branch].find(
-        (i) => i.productVarientId === item.productVarientId
-      );
+        const existing = acc[branch].find(
+          (i) => i.productVarientId === item.productVarientId,
+        );
 
-      if (existing) {
-        existing.count += Number(item.quantity);
-      } else {
-        acc[branch].push({
-          productVarientId: item.productVarientId,
-          count: Number(item.quantity),
-        });
-      }
+        if (existing) {
+          existing.count += Number(item.quantity);
+        } else {
+          acc[branch].push({
+            productVarientId: item.productVarientId,
+            count: Number(item.quantity),
+          });
+        }
 
-      return acc;
-    }, {} as Record<string, { productVarientId: string; count: number }[]>);
+        return acc;
+      },
+      {} as Record<string, { productVarientId: string; count: number }[]>,
+    );
 
     const top5PerBranch = Object.entries(grouped).map(([branch, items]) => ({
       branch,
@@ -326,12 +343,12 @@ export const GET = auth(async function GET(req: any) {
         message: "Analytical data fetch successfully!",
         data: finalData,
       },
-      { status: 200 }
+      { status: 200 },
     );
   } catch (err) {
     return NextResponse.json(
       { success: false, message: "Internal Server Error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 });

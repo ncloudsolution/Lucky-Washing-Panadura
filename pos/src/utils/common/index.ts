@@ -34,7 +34,7 @@ export function backendDataValidation({
           extraPayload: null,
           error: error?.issues,
         },
-        { status: 400 }
+        { status: 400 },
       ),
     };
   }
@@ -132,10 +132,10 @@ export function focusBarcode() {
 
 export const getProductVariantFullNameByVarientId = (
   productMetas: ICacheProduct[],
-  variantId: string
+  variantId: string,
 ) => {
   const product = productMetas.find((pr) =>
-    pr.varients.some((vr) => vr.id === variantId)
+    pr.varients.some((vr) => vr.id === variantId),
   );
 
   if (!product) return null;
@@ -151,10 +151,10 @@ export const getProductVariantFullNameByVarientId = (
 
 export const getProductMetricByVarientId = (
   productMetas: ICacheProduct[],
-  variantId: string
+  variantId: string,
 ) => {
   const product = productMetas.find((pr) =>
-    pr.varients.some((vr) => vr.id === variantId)
+    pr.varients.some((vr) => vr.id === variantId),
   );
 
   if (!product) return null;
@@ -189,8 +189,43 @@ export function getDateRange(filter: string | null) {
   }
 }
 
+export function getNewDateRange(range?: { from?: Date; to?: Date }) {
+  if (!range?.from && !range?.to) {
+    return {}; // all time
+  }
+
+  const from = range?.from ? new Date(range.from) : undefined;
+  const to = range?.to ? new Date(range.to) : undefined;
+
+  // ✅ SAME DATE → filter whole day
+  if (from && to && from.toDateString() === to.toDateString()) {
+    const start = new Date(from);
+    start.setHours(0, 0, 0, 0);
+
+    const end = new Date(from);
+    end.setHours(23, 59, 59, 999);
+
+    return {
+      gte: start,
+      lte: end,
+    };
+  }
+
+  // ✅ Normal range
+  return {
+    ...(from && { gte: from }),
+    ...(to && {
+      lte: (() => {
+        const end = new Date(to);
+        end.setHours(23, 59, 59, 999);
+        return end;
+      })(),
+    }),
+  };
+}
+
 export function CategoryWrapper(
-  FinalCategoryItems: { id: string; name: string }[]
+  FinalCategoryItems: { id: string; name: string }[],
 ) {
   return FinalCategoryItems.filter((i) => i.id !== "0" && i.id !== "temporary");
 }
@@ -202,7 +237,7 @@ export function IncomeCategoryWrapper(FinalCategoryItems: string[]) {
       i !== "Advance Payment" &&
       i !== "Partial Payment" &&
       i !== "Balance Payment" &&
-      i !== "Credit Payment"
+      i !== "Credit Payment",
   );
 }
 
@@ -223,7 +258,7 @@ export function nextYear(date: Date) {
 export function getMissedCyclesFromExpiry(
   expiresAt: Date,
   planCycle: TPeriod,
-  status: TPaymentStatus
+  status: TPaymentStatus,
 ) {
   const now = new Date();
   let cyclesMissed = 0;
