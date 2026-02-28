@@ -20,6 +20,7 @@ import { useSession } from "next-auth/react";
 import { TipWrapper } from "@/components/custom/wrapper/TipWrapper";
 import InvoiceSkeleton from "@/components/custom/skeleton/InvoiceSkeleton";
 import NewInvoice from "../cards/NewInvoice";
+import ModInvoice from "../cards/ModInvoice";
 
 const InvoiceSection = () => {
   const searchParam = useSearchParams();
@@ -137,7 +138,7 @@ const InvoiceSection = () => {
       <div className="relative">
         <div className="z-20 absolute right-5 top-5 rounded-full size-[20px] bg-superbase shadow-md" />
         <div ref={contentRef}>
-          <NewInvoice data={invoiceData} />
+          <ModInvoice data={invoiceData} />
         </div>
       </div>
     </SuperCenterWrapper>

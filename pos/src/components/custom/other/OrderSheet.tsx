@@ -26,6 +26,7 @@ import { useSession } from "next-auth/react";
 import { DeleteDialog } from "../dialogs/DeleteDialog";
 import { toast } from "sonner";
 import { BasicHoverCard } from "../cards/BasicHoverCard";
+import ModInvoice from "../cards/ModInvoice";
 
 export function OrderSheet({ id }: { id: string }) {
   const [open, setOpen] = useState(false);
@@ -261,7 +262,7 @@ export function OrderSheet({ id }: { id: string }) {
             </SheetTitle>
 
             <div ref={contentRef} className="flex flex-col gap-4">
-              <NewInvoice data={invoiceData} mini />
+              <ModInvoice data={invoiceData} mini />
             </div>
           </div>
         ) : (
