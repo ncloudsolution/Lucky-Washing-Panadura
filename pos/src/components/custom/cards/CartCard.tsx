@@ -355,8 +355,8 @@ const CartCard = () => {
         counterNo: session?.user.counterNo,
 
         //this data get only for sheet not the invoice
-        customer: "x",
-        customerMobile: "x",
+        customer: currentCustomer?.name as string,
+        customerMobile: currentCustomer?.mobile as string,
         customerCreatedAt: new Date().toISOString(),
       },
       items: revItems,
