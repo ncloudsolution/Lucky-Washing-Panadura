@@ -21,7 +21,7 @@ export function SelectProductDialog({
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedVariations, setSelectedVariations] = useState<Set<string>>(
-    new Set()
+    new Set(),
   );
 
   const variationCount = data?.varients?.length || 0;
@@ -87,7 +87,7 @@ export function SelectProductDialog({
 
   const computedVariations = useMemo(
     () => getSelectedVariationData(),
-    [selectedVariations, data]
+    [selectedVariations, data],
   );
 
   return (
@@ -119,7 +119,7 @@ export function SelectProductDialog({
 
       <Dialog open={isOpen} onOpenChange={handleCloseDialog}>
         <DialogContent
-          className="max-w-2xl max-h-[90vh] overflow-y-auto gap-4"
+          className="min-w-5xl max-h-[90vh] overflow-y-auto gap-4"
           autoFocus={false}
         >
           <DialogTitle className="leading-[20px]">{data?.name}</DialogTitle>
@@ -135,7 +135,7 @@ export function SelectProductDialog({
               </div>
 
               <div className="flex-1 flex flex-col">
-                <div className="grid grid-cols-2 gap-2 mb-4">
+                <div className="grid grid-cols-5 gap-2 mb-4">
                   {data?.varients?.map((item: any, index: number) => (
                     <div
                       key={item.id || index}
