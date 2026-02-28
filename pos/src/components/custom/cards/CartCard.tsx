@@ -549,12 +549,13 @@ const CartCard = () => {
             <>
               {paymentPortion === "Advance Payment" && (
                 <Input
+                  type="number"
                   className={`${
                     error.paymentPortionAmountError && !paymentPortionAmount
                       ? "border-destructive focus:border-destructive bg-white text-black"
                       : "border-white focus:border-white bg-subbase text-white"
                   } w-[80px] border-2  font-semibold `}
-                  value={paymentPortionAmount === 0 ? "" : paymentPortionAmount}
+                  value={paymentPortionAmount}
                   inputMode="decimal"
                   onChange={(e) => {
                     const value = e.target.value;
@@ -581,6 +582,7 @@ const CartCard = () => {
 
           {remoteOrder && (
             <Input
+              type="number"
               className={`${
                 error.deliveryfeeError && !deliveryfee
                   ? "border-destructive focus:border-destructive bg-white text-black"
