@@ -72,6 +72,9 @@ const ModInvoice = ({
     DELIVERY: sinhalaBill
       ? singlishToUnicode("prawaahana gaasthu")
       : "Delivery Charge",
+    PAYMENT_GENERAL: sinhalaBill
+      ? singlishToUnicode("gewiim aakaraya")
+      : "Payment Mode",
     INITIAL_PAYMENT_MODE: sinhalaBill
       ? singlishToUnicode("praThama gewum maaDhYa")
       : "Initial Payment Mode",
@@ -90,6 +93,7 @@ const ModInvoice = ({
     DATE_TIME: sinhalaBill
       ? singlishToUnicode("dhinaya haa wealaawa")
       : "Date & Time",
+    CUSTOMER: sinhalaBill ? singlishToUnicode("gaNudhenukaru") : "Customer",
   };
 
   const paymentModValue = (x: TPaymentMethod) => {
@@ -238,17 +242,18 @@ const ModInvoice = ({
             )),
           )}
 
-          {data.baseData.deliveryfee && (
-            <div className="flex justify-between font-semibold text-[13px]">
-              <div>{headings.DELIVERY}</div>
-              <div>
-                {new Intl.NumberFormat("en-US", {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                }).format(data.baseData.deliveryfee)}
+          {data.baseData.deliveryfee !== null &&
+            data.baseData.deliveryfee !== 0 && (
+              <div className="flex justify-between font-semibold text-[13px]">
+                <div>{headings.DELIVERY}</div>
+                <div>
+                  {new Intl.NumberFormat("en-US", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  }).format(data.baseData.deliveryfee)}
+                </div>
               </div>
-            </div>
-          )}
+            )}
         </div>
 
         <div className="w-full h-[2px] bg-primary mb-2" />
@@ -274,13 +279,21 @@ const ModInvoice = ({
 
         <div className="flex flex-col py-4 border-b-1 border-dashed border-primary text-[12px]">
           <div className="flex justify-between leading-[17px]">
+            {headings.PAYMENT_GENERAL}
+            <span>
+              {data.baseData.incomeCategory} -{" "}
+              {paymentModValue(data.baseData.paymentMethod)}
+            </span>
+          </div>
+
+          {/* <div className="flex justify-between leading-[17px]">
             {headings.INITIAL_PAYMENT_MODE}
             <span>{paymentModValue(data.baseData.paymentMethod)}</span>
           </div>
           <div className="flex justify-between leading-[17px]">
             {headings.PAYMENT_TYPE}
             <span>{data.baseData.incomeCategory}</span>
-          </div>
+          </div> */}
           <div className="text-sm font-saira flex justify-between leading-[17px] font-semibold">
             {headings.PAID_AMOUNT}
             <span>
@@ -303,10 +316,17 @@ const ModInvoice = ({
               )}
             </span>
           </div>
-          <div className="flex justify-between leading-[17px] mt-4">
+
+          <div className="flex justify-between leading-[17px]  mt-4">
+            {headings.CUSTOMER}
+            <span>{data.baseData.customerMobile}</span>
+          </div>
+
+          <div className="flex justify-between leading-[17px]">
             {headings.STATUS}{" "}
             <span>{statusModValue(data.baseData.status)}</span>
           </div>
+
           <div className="flex justify-between leading-[17px]">
             {headings.DATE_TIME}
             <span className="flex gap-2">
@@ -328,10 +348,13 @@ const ModInvoice = ({
           </CardDescription>
 
           {/* <div>Thank you come again</div> */}
+
           <div className="flex gap-1.5">
             Powerd by
-            <span className="font-semibold">{SoftwareOwner.businessName}</span>
-            {productData.contact.shortweb}
+            {/* <span className="font-semibold">{SoftwareOwner.businessName}</span> */}
+            <span className="font-semibold">
+              {productData.contact.shortweb}
+            </span>
           </div>
         </div>
       </div>
