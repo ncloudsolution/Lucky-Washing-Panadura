@@ -243,9 +243,9 @@ const CartCard = () => {
     }
 
     // 2️⃣ Advance payment validation
-    if (paymentPortion === "Advance Payment" && paymentPortionAmount === 0) {
-      newErrorState.paymentPortionAmountError = true;
-    }
+    // if (paymentPortion === "Advance Payment" && paymentPortionAmount === 0) {
+    //   newErrorState.paymentPortionAmountError = true;
+    // }
 
     if (
       paymentPortion === "Advance Payment" &&
@@ -276,7 +276,7 @@ const CartCard = () => {
       if (newErrorState.customerError) {
         toast.error("Customer Required for Order");
       } else if (newErrorState.paymentPortionAmountError) {
-        toast.error("Advance payment cannot be 0 or total.");
+        toast.error("Advance payment cannot be total.");
       } else if (newErrorState.deliveryfeeError) {
         toast.error("Delivery fee should include the order");
       } else if (newErrorState.queueError) {
