@@ -1,6 +1,7 @@
 "use client";
 import NoRecordsCard from "@/components/custom/cards/NoRecordsCard";
 import { ChartPieLabel } from "@/components/custom/charts/ChartPieLabel";
+import { DatePickerWithRange } from "@/components/custom/inputs/DatePickerWithRange";
 import { SelectOnSearch } from "@/components/custom/inputs/SelectOnSearch";
 import TextSkeleton from "@/components/custom/skeleton/TextSkeleton";
 import { Card } from "@/components/ui/card";
@@ -22,11 +23,17 @@ import { useQuery } from "@tanstack/react-query";
 import { Building2, Calendar } from "lucide-react";
 import { useSession } from "next-auth/react";
 import React, { useEffect, useState } from "react";
+import { DateRange } from "react-day-picker";
 
 const Dashboard = () => {
+  const [date, setDate] = React.useState<DateRange | undefined>({
+    from: new Date(new Date().getFullYear(), 0, 1),
+    to: new Date(),
+    // to: addDays(new Date(new Date().getFullYear(), 0, 20), 20),  //(Jan 20 + 20 days)
+  });
   const { data: session, status } = useSession();
 
-  const [timeFrame, setTimeFrame] = useState("All Time");
+  // const [timeFrame, setTimeFrame] = useState("All Time");
   const [branch, setBranch] = useState("All Branches");
 
   useEffect(() => {
@@ -72,13 +79,13 @@ const Dashboard = () => {
     isLoading: isLoadingAnalytics,
     error,
   } = useQuery({
-    queryKey: ["analytics", timeFrame],
+    queryKey: ["analytics", date],
     queryFn: async () => {
-      const query = timeFrame.toLocaleLowerCase().split(" ").join("");
+      // const query = timeFrame.toLocaleLowerCase().split(" ").join("");
 
       const response = await BasicDataFetch({
         method: "GET",
-        endpoint: `/api/analytics?timeframe=${query}`,
+        endpoint: `/api/analytics?from=${date?.from}&to=${date?.to}`,
       });
       // Return only the data array - this is what gets cached
       return response?.data as IAnalytics;
@@ -246,7 +253,7 @@ const Dashboard = () => {
                 // setSearch("");
               }}
             />
-            <SelectOnSearch
+            {/* <SelectOnSearch
               isLoading={isLoadingAnalytics || isLoadingProducts}
               icon={<Calendar className="text-white" size={18} />}
               selections={[
@@ -261,6 +268,12 @@ const Dashboard = () => {
                 setTimeFrame(value);
                 // setSearch("");
               }}
+            /> */}
+            <DatePickerWithRange
+              date={date}
+              setDate={setDate}
+              isLoading={isLoadingAnalytics || isLoadingProducts}
+              label={false}
             />
           </div>
 
@@ -517,7 +530,9 @@ const Dashboard = () => {
         </div>
         <ChartPieLabel
           title="Payment Methods"
-          description={timeFrame}
+          description={`${date?.from?.toLocaleDateString() ?? ""} ${
+            date?.to ? `- ${date.to.toLocaleDateString()}` : ""
+          }`}
           chartData={getChartData()}
           isLoading={isLoadingAnalytics}
           extraDataArray={analytics?.incomes}
