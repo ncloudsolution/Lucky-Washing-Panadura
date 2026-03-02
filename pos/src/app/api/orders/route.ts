@@ -8,7 +8,7 @@ import {
 } from "@/data";
 import { hasPermission, T_Role } from "@/data/permissions";
 import prisma from "@/prisma/client";
-import { EbillMsg } from "@/utils/common";
+import { EbillMsg, getNewDateRange } from "@/utils/common";
 import { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 
@@ -459,15 +459,166 @@ export const GET = auth(async function GET(req: any) {
   const authBranch = req.auth?.user?.branch;
 
   //testing purpose
-  // const authRole = "uniter" as T_Role;
+  //const authRole = "uniter" as T_Role;
 
   let mode: string;
   if (searchParams.has("id")) mode = "id";
   else if (searchParams.has("payment-breakdown")) mode = "payment-breakdown";
   else if (searchParams.has("search")) mode = "search";
+  else if (searchParams.has("debounce")) mode = "debounce";
+  else if (searchParams.has("to") || searchParams.has("from")) mode = "dates";
   else mode = "list";
 
   switch (mode) {
+    case "dates": {
+      if (!req.auth) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: "You are not authenticated",
+            error: "UNAUTHORIZED",
+          },
+          { status: 401 },
+        );
+      }
+
+      if (
+        !hasPermission({
+          userRole: authRole,
+          permission: "view:orders",
+        })
+      ) {
+        return NextResponse.json(
+          { success: false, message: "Not authorized" },
+          { status: 403 },
+        );
+      }
+
+      const fromParam = searchParams.get("from");
+      const toParam = searchParams.get("to");
+
+      const dateRange = {
+        from: fromParam ? new Date(fromParam) : undefined,
+        to: toParam ? new Date(toParam) : undefined,
+      };
+
+      const orderMetas = await prisma.orderMeta.findMany({
+        where: {
+          createdAt: getNewDateRange(dateRange),
+          ...(authRole === "cashier"
+            ? { operator: authId }
+            : authRole === "manager"
+              ? { branch: authBranch }
+              : {}),
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+        include: {
+          incomes: {
+            select: {
+              amount: true,
+            },
+          },
+        },
+      });
+
+      const ordersWithIncomeSum = orderMetas.map((order) => {
+        const totalIncome = order.incomes.reduce(
+          (sum, inc) => sum + Number(inc.amount),
+          0,
+        );
+
+        return {
+          ...order,
+          paymentAmount: totalIncome,
+        };
+      });
+
+      return NextResponse.json(
+        {
+          success: true,
+          message: "Recent orders fetch successfully!",
+          data: ordersWithIncomeSum,
+        },
+        { status: 200 },
+      );
+    }
+
+    case "debounce": {
+      if (!req.auth) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: "You are not authenticated",
+            error: "UNAUTHORIZED",
+          },
+          { status: 401 },
+        );
+      }
+
+      if (
+        !hasPermission({
+          userRole: authRole,
+          permission: "view:orders",
+        })
+      ) {
+        return NextResponse.json(
+          { success: false, message: "Not authorized" },
+          { status: 403 },
+        );
+      }
+
+      const debounce = searchParams.get("debounce");
+
+      const orderMetas = await prisma.orderMeta.findMany({
+        where: {
+          ...(debounce && {
+            invoiceId: {
+              startsWith: debounce,
+            },
+          }),
+
+          ...(authRole === "cashier"
+            ? { operator: authId }
+            : authRole === "manager"
+              ? { branch: authBranch }
+              : {}),
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+        include: {
+          incomes: {
+            select: {
+              amount: true,
+            },
+          },
+        },
+      });
+
+      const ordersWithIncomeSum = orderMetas.map((order) => {
+        const totalIncome = order.incomes.reduce(
+          (sum, inc) => sum + Number(inc.amount),
+          0,
+        );
+
+        return {
+          ...order,
+          paymentAmount: totalIncome,
+        };
+      });
+
+      return NextResponse.json(
+        {
+          success: true,
+          message: "Recent orders fetch successfully!",
+          data: ordersWithIncomeSum,
+        },
+        { status: 200 },
+      );
+    }
+
     case "payment-breakdown": {
       const id = searchParams.get("payment-breakdown")?.trim();
 

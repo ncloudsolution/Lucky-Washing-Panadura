@@ -35,7 +35,11 @@ const items = [
   },
   {
     title: "Orders",
-    urls: [posFrontend.orders, posFrontend.ordersHistory],
+    urls: [
+      posFrontend.ordersAll,
+      posFrontend.orders,
+      posFrontend.ordersHistory,
+    ],
     icon: Archive,
   },
   {
@@ -68,7 +72,7 @@ export function AppSidebar() {
             <SidebarMenu className="gap-5">
               {items.map((item) => {
                 const active = item.urls.some((url) =>
-                  pathname.startsWith(url)
+                  pathname.startsWith(url),
                 );
                 return (
                   <SidebarMenuItem key={item.title}>
