@@ -10,6 +10,7 @@ import ViewAccessChecker from "@/components/custom/other/AccessChecker";
 import { OrderSheet } from "@/components/custom/other/OrderSheet";
 import ListSkeleton from "@/components/custom/skeleton/ListSkeleton";
 import TextSkeleton from "@/components/custom/skeleton/TextSkeleton";
+import { TipWrapper } from "@/components/custom/wrapper/TipWrapper";
 import { Button } from "@/components/ui/button";
 import { FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
@@ -43,6 +44,7 @@ import {
   Pencil,
   RefreshCw,
   Repeat,
+  Sheet,
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
@@ -145,7 +147,7 @@ const AllOrders = () => {
   return (
     <div className="flex flex-col h-full w-full min-w-7xl text-sm overflow-x-auto no-scrollbar">
       <div className="w-full flex justify-between">
-        <div className="flex w-fit gap-8 mb-5">
+        <div className="flex w-fit gap-8 mb-5 items-end">
           <DatePickerWithRange
             date={dates}
             setDate={setDates}
@@ -201,6 +203,15 @@ const AllOrders = () => {
               onChange={(e) => setQuery(e.target.value)}
             />
           </div>
+
+          {/* <TipWrapper triggerText="Export as Excel">
+            <Button
+              disabled={isLoading || isLoadingDebounce || disableDefaultFilters}
+              className="flex gap-2 disabled:bg-gray-500 bg-green-700 hover:bg-green-700 text-white rounded-sm w-[150px]"
+            >
+              <Sheet /> Export
+            </Button>
+          </TipWrapper> */}
         </div>
         {filteredOrders && !isLoading && !isLoadingDebounce ? (
           <div className="flex flex-col justify-center items-center text-superbase">
