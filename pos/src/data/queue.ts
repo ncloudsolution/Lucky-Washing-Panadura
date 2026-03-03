@@ -33,19 +33,31 @@ export async function processOrderQueue() {
       const result = await sendWithRetry(nextItem);
 
       if (result.success) {
+        setSyncStatus("idle");
         await removeFromQueue(nextItem.id); // ✅ remove item
         if (result.serverId !== "edited") {
           await updateLastEbillId(result.serverId as string);
         }
       } else {
-        // ❌ failed after retries → skip item
-        // await markAsFailed(nextItem.id);
-        break;
+        console.warn("Queue paused due to failure. Will retry later.");
+        scheduleQueueRetry();
+        return; // ⛔ stop this run, but don't kill future retries
       }
     }
   } finally {
     isProcessingQueue = false;
   }
+}
+
+let retryTimeout: NodeJS.Timeout | null = null;
+
+function scheduleQueueRetry() {
+  if (retryTimeout) return; // prevent multiple timers
+
+  retryTimeout = setTimeout(() => {
+    retryTimeout = null;
+    processOrderQueue();
+  }, 5000); // retry after 5 seconds
 }
 
 async function sendWithRetry(
@@ -74,6 +86,11 @@ async function sendWithRetry(
     } catch (err) {
       console.error(`Queue item ${item.id} failed (attempt ${attempt})`, err);
 
+      if (!navigator.onLine) {
+        setSyncStatus("offline");
+      } else {
+        setSyncStatus("paused");
+      }
       if (attempt === MAX_RETRIES) {
         return { success: false };
       }
@@ -104,3 +121,32 @@ async function removeFromQueue(id: string) {
 //     failedAt: new Date().toISOString(),
 //   });
 // }
+type SyncStatus = "idle" | "syncing" | "paused" | "offline";
+
+let syncStatus: SyncStatus = "idle";
+
+export function setSyncStatus(status: SyncStatus) {
+  syncStatus = status;
+  window.dispatchEvent(new CustomEvent("sync-status", { detail: status }));
+}
+
+export function getSyncStatus() {
+  return syncStatus;
+}
+
+export async function forceProcessQueue() {
+  console.log("🔁 Manual queue retry triggered");
+
+  // reset paused timers
+  if (retryTimeout) {
+    clearTimeout(retryTimeout);
+    retryTimeout = null;
+  }
+
+  // allow processing again
+  isProcessingQueue = false;
+
+  setSyncStatus("syncing");
+
+  await processOrderQueue();
+}

@@ -27,7 +27,8 @@ import { DateRange } from "react-day-picker";
 
 const Dashboard = () => {
   const [date, setDate] = React.useState<DateRange | undefined>({
-    from: new Date(new Date().getFullYear(), 0, 1),
+    //  from: new Date(new Date().getFullYear(), 0, 1),
+    from: new Date(),
     to: new Date(),
     // to: addDays(new Date(new Date().getFullYear(), 0, 20), 20),  //(Jan 20 + 20 days)
   });

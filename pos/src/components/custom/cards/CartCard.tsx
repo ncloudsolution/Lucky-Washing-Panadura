@@ -65,6 +65,7 @@ import { useReactToPrint } from "react-to-print";
 import NewInvoice, { IInvoice } from "./NewInvoice";
 import { addToQueue } from "@/data/queue";
 import ModInvoice from "./ModInvoice";
+import { getTodayRange } from "@/app/(screens)/core/(orders)/orders-all/page";
 
 const CartCard = () => {
   const queryClient = useQueryClient();
@@ -389,7 +390,7 @@ const CartCard = () => {
       //update lastest orders
       if (orderType?.editMode) {
         await queryClient.invalidateQueries({
-          queryKey: ["latest-order-metas"],
+          queryKey: ["all-orders", getTodayRange(new Date())],
         });
 
         await queryClient.invalidateQueries({
@@ -422,7 +423,7 @@ const CartCard = () => {
         }
 
         await queryClient.invalidateQueries({
-          queryKey: ["latest-order-metas"],
+          queryKey: ["all-orders", getTodayRange(new Date())],
         });
       }
 

@@ -6,7 +6,8 @@ import BarcodeSearchBar from "../inputs/BarcodeSearchBar";
 import { SDK_VERSION } from "firebase/app";
 import SyncBtn from "../buttons/SyncBtn";
 import CharactorMapDialog from "../dialogs/CharactorMapDialog";
-import { QueueBtn } from "../other/QueueBtn";
+
+import { ConnectionBtn } from "../buttons/ConnectionBtn";
 
 const TopCard = async ({ user }: { user: User }) => {
   return (
@@ -26,7 +27,7 @@ const TopCard = async ({ user }: { user: User }) => {
             </div>
           )}
         </div>
-        <QueueBtn />
+        <ConnectionBtn />
       </div>
       {/* <BarcodeSearchBar /> */}
       <div className="flex gap-2 items-center">

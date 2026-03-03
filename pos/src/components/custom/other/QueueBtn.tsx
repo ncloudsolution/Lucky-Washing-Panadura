@@ -1,6 +1,6 @@
 "use client";
 import { Button } from "@/components/ui/button";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Popover,
   PopoverContent,
@@ -12,8 +12,13 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { cachedb } from "@/data/dbcache";
 import { formatDate } from "@/utils/common";
 import { toast } from "sonner";
+import { forceProcessQueue } from "@/data/queue";
 
-export function QueueBtn() {
+export function QueueBtn({
+  status,
+}: {
+  status: "syncing" | "idle" | "paused" | "offline";
+}) {
   const [popoverOpen, setPopoverOpen] = useState(false);
 
   const queue = useLiveQuery(() => cachedb.queue.toArray(), []);
@@ -103,14 +108,24 @@ export function QueueBtn() {
                 })}
 
                 <div
-                  className={`w-full text-center py-2 font-semibold text-sm ${len > 7 ? "text-destructive" : len > 3 ? "text-amber-600" : "text-superbase"} `}
+                  className={`w-full text-center py-2 font-semibold text-sm ${status == "offline" || status === "paused" ? "text-destructive" : status === "syncing" ? "text-amber-600" : "text-superbase"} `}
                 >
-                  {len > 7
-                    ? "Connection unstable, please take action"
-                    : len > 3
+                  {status == "offline" || status === "paused"
+                    ? "Connection unstable or lost"
+                    : status === "syncing"
                       ? "Connection weak, please monitor"
                       : "Connection stable"}
                 </div>
+
+                {len > 0 && (
+                  <button
+                    onClick={forceProcessQueue}
+                    disabled={status === "syncing"}
+                    className="px-4 py-2 rounded bg-yellow-500 text-black disabled:opacity-50"
+                  >
+                    {status === "syncing" ? "Syncing..." : "Force Sync"}
+                  </button>
+                )}
               </>
             ) : (
               <div className="text-muted-foreground text-sm text-center py-4">

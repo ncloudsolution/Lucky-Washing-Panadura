@@ -3,6 +3,7 @@ export const posFrontend = {
   core: "/core",
   pos: "/core/pos",
   orders: "/core/orders-latest",
+  ordersAll: "/core/orders-all",
   ordersHistory: "/core/orders-history",
   products: "/core/products",
   customers: "/core/customers",

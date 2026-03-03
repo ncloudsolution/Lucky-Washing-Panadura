@@ -2,9 +2,15 @@
 import { LoaderBtn } from "@/components/custom/buttons/LoaderBtn";
 import NoRecordsCard from "@/components/custom/cards/NoRecordsCard";
 import { CustomDialog } from "@/components/custom/dialogs/CustomDialog";
+import { DatePickerWithRange } from "@/components/custom/inputs/DatePickerWithRange";
+import { SelectOnSearch } from "@/components/custom/inputs/SelectOnSearch";
 import { OrderSheet } from "@/components/custom/other/OrderSheet";
 import ListSkeleton from "@/components/custom/skeleton/ListSkeleton";
+import TextSkeleton from "@/components/custom/skeleton/TextSkeleton";
 import { Button } from "@/components/ui/button";
+import { FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { PaymentMethod } from "@/data";
 import { IOrderMeta } from "@/data";
 import {
   cachedb,
@@ -14,6 +20,7 @@ import {
   setCurrentCustomer,
 } from "@/data/dbcache";
 import { posFrontend } from "@/data/frontendRoutes";
+import { useDebounce } from "@/hooks/useDebounce";
 import { BasicDataFetch, formatDate } from "@/utils/common";
 import { AlertDialogAction } from "@radix-ui/react-alert-dialog";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -26,20 +33,49 @@ import {
   Pencil,
   Repeat,
 } from "lucide-react";
+import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import React from "react";
+import React, { useState } from "react";
+import { DateRange } from "react-day-picker";
 
-const OrdersLatest = () => {
+export function getTodayRange(date: Date) {
+  const from = new Date(date);
+  from.setHours(0, 0, 0, 0);
+
+  const to = new Date(date);
+  to.setHours(23, 59, 59, 999);
+
+  return { from, to };
+}
+
+const AllOrders = () => {
+  const [date, setDate] = React.useState<DateRange | undefined>(
+    //     {
+    //     //  from: new Date(new Date().getFullYear(), 0, 1),
+    //     from: new Date(),
+    //     to: new Date(),
+    //     // to: addDays(new Date(new Date().getFullYear(), 0, 20), 20),  //(Jan 20 + 20 days)
+    //   }
+    getTodayRange(new Date()),
+  );
+  console.log(date);
+  const [paymentStatus, setPaymentStatus] = useState("All");
+  const { data: session } = useSession();
+  const [query, setQuery] = useState(session?.user.counterNo ?? "01");
+
+  const debouncedQuery = useDebounce(query);
+  const disableDefaultFilters = debouncedQuery.length > 2;
+
   const {
     data: orderMetas,
     isLoading,
     error,
   } = useQuery({
-    queryKey: ["latest-order-metas"],
+    queryKey: ["all-orders", date],
     queryFn: async () => {
       const response = await BasicDataFetch({
         method: "GET",
-        endpoint: `/api/orders`,
+        endpoint: `/api/orders?from=${date?.from}&to=${date?.to}`,
       });
       // Return only the data array - this is what gets cached
       return response?.data as IOrderMeta[];
@@ -48,10 +84,113 @@ const OrdersLatest = () => {
     staleTime: 1000 * 60 * 5,
   });
 
-  return <OrderUI isLoading={isLoading} orderMetas={orderMetas ?? []} />;
+  const { data: orderMetasDebounce, isLoading: isLoadingDebounce } = useQuery({
+    queryKey: ["order-debounce", debouncedQuery],
+    queryFn: () =>
+      BasicDataFetch({
+        method: "GET",
+        endpoint: `/api/orders?debounce=${debouncedQuery}`,
+      }),
+    select: (response) => response?.data as IOrderMeta[],
+    staleTime: 1000 * 60 * 5,
+    enabled: disableDefaultFilters, // Only fetch when 'search' is truthy
+  });
+
+  console.log(error);
+  const filteredOrders = React.useMemo(() => {
+    // When searching (>=3 chars)
+    if (disableDefaultFilters) {
+      return orderMetasDebounce ?? [];
+    }
+
+    // Default filtering
+    if (!orderMetas) return [];
+
+    return orderMetas.filter((i) => {
+      const due =
+        Number(i?.saleValue ?? 0) +
+        Number(i?.deliveryfee ?? 0) -
+        Number(i?.paymentAmount ?? 0);
+
+      const paymentMatch =
+        paymentStatus === "All" ||
+        (paymentStatus === "Settled" && due === 0) ||
+        (paymentStatus === "Outstanding" && due > 0);
+
+      return paymentMatch;
+    });
+  }, [orderMetas, orderMetasDebounce, paymentStatus, disableDefaultFilters]);
+
+  return (
+    <div className="flex flex-col h-full w-full min-w-7xl text-sm overflow-x-auto no-scrollbar">
+      <div className="w-full flex justify-between">
+        <div className="flex w-fit gap-8 mb-5">
+          <DatePickerWithRange
+            date={date}
+            setDate={setDate}
+            isLoading={isLoading || isLoadingDebounce || disableDefaultFilters}
+          />
+
+          <div className="flex w-full flex-col gap-1.5">
+            <FieldLabel htmlFor="date-picker-range">
+              Search By Payment Status
+            </FieldLabel>
+
+            <SelectOnSearch
+              isLoading={
+                isLoading || isLoadingDebounce || disableDefaultFilters
+              }
+              icon={<Coins className="text-white" size={18} />}
+              selections={["All", "Settled", "Outstanding"]}
+              value={paymentStatus}
+              onValueChange={(value) => {
+                setPaymentStatus(value);
+                // setSearch("");
+              }}
+            />
+          </div>
+
+          <div className="flex w-full flex-col gap-1.5">
+            <FieldLabel htmlFor="date-picker-range">
+              Search By Invoice No
+            </FieldLabel>
+            <Input
+              value={query}
+              disabled={isLoading || isLoadingDebounce}
+              className="bg-superbase disabled:bg-gray-500 text-white"
+              onChange={(e) => setQuery(e.target.value)}
+            />
+          </div>
+        </div>
+        {filteredOrders && !isLoading && !isLoadingDebounce ? (
+          <div className="flex flex-col justify-center items-center text-superbase">
+            <span className="text-5xl font-semibold">
+              {filteredOrders?.length}
+            </span>
+            <span>Records Found</span>
+          </div>
+        ) : (
+          <div className="flex flex-col justify-center items-center text-muted-foreground">
+            <TextSkeleton
+              length={2}
+              numeric
+              type="muted"
+              textSize="text-5xl font-semibold"
+            />
+            <span>Records Found</span>
+          </div>
+        )}
+      </div>
+
+      <OrderUI
+        isLoading={isLoading || isLoadingDebounce}
+        orderMetas={filteredOrders ?? []}
+      />
+    </div>
+  );
 };
 
-export default OrdersLatest;
+export default AllOrders;
 
 const HeaderLabel = () => {
   return (
@@ -93,7 +232,7 @@ export const OrderUI = ({
   return (
     <>
       <HeaderLabel />
-      <div className="w-full h-[70vh] py-2 overflow-y-scroll no-scrollbar">
+      <div className="w-full h-[67.5vh] py-2 overflow-y-scroll no-scrollbar">
         {isLoading ? (
           <ListSkeleton height={60} length={10} />
         ) : orderMetas && orderMetas.length > 0 ? (
@@ -188,14 +327,14 @@ export const OrderUI = ({
                                     clientPrimaryKey,
                                     {
                                       lastOrderId: String(or.id),
-                                    }
+                                    },
                                   );
 
                                   await setClientEditMode(true);
                                   setDialogLoading(true); // show loading in dialog
                                   const invoiceData =
                                     await editInvoiceMutation.mutateAsync(
-                                      or.id!
+                                      or.id!,
                                     );
                                   await editInvoice(invoiceData);
                                   router.push(posFrontend.pos);
