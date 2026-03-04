@@ -1,16 +1,21 @@
 "use client";
 import { LoaderBtn } from "@/components/custom/buttons/LoaderBtn";
 import NoRecordsCard from "@/components/custom/cards/NoRecordsCard";
+import { AddNewDialog } from "@/components/custom/dialogs/AddNewDialog";
 import { CustomDialog } from "@/components/custom/dialogs/CustomDialog";
+import FormStateChange from "@/components/custom/forms/FormStateChange";
 import { DatePickerWithRange } from "@/components/custom/inputs/DatePickerWithRange";
 import { SelectOnSearch } from "@/components/custom/inputs/SelectOnSearch";
+import ViewAccessChecker from "@/components/custom/other/AccessChecker";
 import { OrderSheet } from "@/components/custom/other/OrderSheet";
 import ListSkeleton from "@/components/custom/skeleton/ListSkeleton";
 import TextSkeleton from "@/components/custom/skeleton/TextSkeleton";
+import { TipWrapper } from "@/components/custom/wrapper/TipWrapper";
 import { Button } from "@/components/ui/button";
 import { FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { PaymentMethod } from "@/data";
+import { Skeleton } from "@/components/ui/skeleton";
+import { orderStatus, PaymentMethod } from "@/data";
 import { IOrderMeta } from "@/data";
 import {
   cachedb,
@@ -20,18 +25,26 @@ import {
   setCurrentCustomer,
 } from "@/data/dbcache";
 import { posFrontend } from "@/data/frontendRoutes";
+import { T_Role } from "@/data/permissions";
 import { useDebounce } from "@/hooks/useDebounce";
 import { BasicDataFetch, formatDate } from "@/utils/common";
 import { AlertDialogAction } from "@radix-ui/react-alert-dialog";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   BadgeCheck,
+  Check,
+  CheckCheck,
+  CircleCheck,
+  CircleX,
   Coins,
   HandCoins,
   Home,
   MapPin,
+  NotebookPen,
   Pencil,
+  RefreshCw,
   Repeat,
+  Sheet,
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
@@ -49,7 +62,7 @@ export function getTodayRange(date: Date) {
 }
 
 const AllOrders = () => {
-  const [date, setDate] = React.useState<DateRange | undefined>(
+  const [dates, setDates] = React.useState<DateRange | undefined>(
     //     {
     //     //  from: new Date(new Date().getFullYear(), 0, 1),
     //     from: new Date(),
@@ -58,9 +71,11 @@ const AllOrders = () => {
     //   }
     getTodayRange(new Date()),
   );
-  console.log(date);
+  console.log(dates);
   const [paymentStatus, setPaymentStatus] = useState("All");
+  const [odStatus, setOdStatus] = useState("All");
   const { data: session } = useSession();
+  const role = session?.user.role.toLowerCase();
   const [query, setQuery] = useState(session?.user.counterNo ?? "01");
 
   const debouncedQuery = useDebounce(query);
@@ -71,11 +86,11 @@ const AllOrders = () => {
     isLoading,
     error,
   } = useQuery({
-    queryKey: ["all-orders", date],
+    queryKey: ["all-orders", dates],
     queryFn: async () => {
       const response = await BasicDataFetch({
         method: "GET",
-        endpoint: `/api/orders?from=${date?.from}&to=${date?.to}`,
+        endpoint: `/api/orders?from=${dates?.from}&to=${dates?.to}`,
       });
       // Return only the data array - this is what gets cached
       return response?.data as IOrderMeta[];
@@ -117,17 +132,25 @@ const AllOrders = () => {
         (paymentStatus === "Settled" && due === 0) ||
         (paymentStatus === "Outstanding" && due > 0);
 
-      return paymentMatch;
+      const statusMatch = odStatus === "All" || odStatus === i.status;
+
+      return paymentMatch && statusMatch;
     });
-  }, [orderMetas, orderMetasDebounce, paymentStatus, disableDefaultFilters]);
+  }, [
+    orderMetas,
+    orderMetasDebounce,
+    paymentStatus,
+    odStatus,
+    disableDefaultFilters,
+  ]);
 
   return (
     <div className="flex flex-col h-full w-full min-w-7xl text-sm overflow-x-auto no-scrollbar">
       <div className="w-full flex justify-between">
-        <div className="flex w-fit gap-8 mb-5">
+        <div className="flex w-fit gap-8 mb-5 items-end">
           <DatePickerWithRange
-            date={date}
-            setDate={setDate}
+            date={dates}
+            setDate={setDates}
             isLoading={isLoading || isLoadingDebounce || disableDefaultFilters}
           />
 
@@ -152,6 +175,25 @@ const AllOrders = () => {
 
           <div className="flex w-full flex-col gap-1.5">
             <FieldLabel htmlFor="date-picker-range">
+              Search By Order Status
+            </FieldLabel>
+
+            <SelectOnSearch
+              isLoading={
+                isLoading || isLoadingDebounce || disableDefaultFilters
+              }
+              icon={<NotebookPen className="text-white" size={18} />}
+              selections={["All", ...orderStatus]}
+              value={odStatus}
+              onValueChange={(value) => {
+                setOdStatus(value);
+                // setSearch("");
+              }}
+            />
+          </div>
+
+          <div className="flex w-full flex-col gap-1.5">
+            <FieldLabel htmlFor="date-picker-range">
               Search By Invoice No
             </FieldLabel>
             <Input
@@ -161,6 +203,15 @@ const AllOrders = () => {
               onChange={(e) => setQuery(e.target.value)}
             />
           </div>
+
+          {/* <TipWrapper triggerText="Export as Excel">
+            <Button
+              disabled={isLoading || isLoadingDebounce || disableDefaultFilters}
+              className="flex gap-2 disabled:bg-gray-500 bg-green-700 hover:bg-green-700 text-white rounded-sm w-[150px]"
+            >
+              <Sheet /> Export
+            </Button>
+          </TipWrapper> */}
         </div>
         {filteredOrders && !isLoading && !isLoadingDebounce ? (
           <div className="flex flex-col justify-center items-center text-superbase">
@@ -183,6 +234,8 @@ const AllOrders = () => {
       </div>
 
       <OrderUI
+        dates={dates}
+        role={role}
         isLoading={isLoading || isLoadingDebounce}
         orderMetas={filteredOrders ?? []}
       />
@@ -213,7 +266,11 @@ const HeaderLabel = () => {
 export const OrderUI = ({
   isLoading,
   orderMetas,
+  role,
+  dates,
 }: {
+  dates: DateRange | undefined;
+  role: T_Role;
   isLoading: boolean;
   orderMetas: IOrderMeta[];
 }) => {
@@ -280,7 +337,50 @@ export const OrderUI = ({
                         {or.invoiceId}
                       </div>
                       <div className="flex-1 text-center">{or.branch}</div>
-                      <div className="flex-1 text-center">{or.status}</div>
+
+                      <ViewAccessChecker
+                        key={index}
+                        permission="create:order"
+                        userRole={role}
+                        component={
+                          <AddNewDialog
+                            width={"min-w-xl"}
+                            form={<FormStateChange data={or} dates={dates} />}
+                            triggerBtn={
+                              <div className="flex flex-1 justify-center text-center gap-2 cursor-pointer">
+                                {or.status === "Delivered" ? (
+                                  <div className="bg-superbase size-[25px] rounded-full flex justify-center items-center">
+                                    <CheckCheck
+                                      size={14}
+                                      className="text-white"
+                                    />
+                                  </div>
+                                ) : or.status === "Packed" ? (
+                                  <div className="bg-green-700 size-[25px] rounded-full flex justify-center items-center">
+                                    <Check size={14} className="text-white" />
+                                  </div>
+                                ) : or.status === "Processing" ? (
+                                  <div className="bg-yellow-500 size-[25px] rounded-full flex justify-center items-center">
+                                    <RefreshCw
+                                      size={14}
+                                      className="text-black"
+                                    />
+                                  </div>
+                                ) : (
+                                  <div className="bg-destructive size-[25px] rounded-full flex justify-center items-center">
+                                    <CircleX size={14} className="text-white" />
+                                  </div>
+                                )}
+                                {or.status}
+                              </div>
+                            }
+                            triggerText="Change Status"
+                          />
+                        }
+                        skeleton={
+                          <Skeleton className="size-[40px] rounded-sm bg-gray-300 border-slate-400" />
+                        }
+                      />
                       <div className="flex flex-1 justify-center items-center font-medium gap-2">
                         <>
                           <div

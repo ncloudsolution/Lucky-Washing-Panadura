@@ -3,7 +3,7 @@ import { Prisma } from "@prisma/client";
 import { BankDetailsCard } from "@/components/custom/cards/BankDetailsCard";
 
 //change done by sohan
-export const devMode = false;
+export const devMode = true;
 export const BaseUrl = devMode
   ? "http://localhost:3000"
   : "https://lucky-washing-panadura.vercel.app";
@@ -38,6 +38,7 @@ export type TStaffRole = (typeof ENUMStaffRolesArray)[number];
 
 export const orderStatus = [
   "Processing", //Order is being prepared or packed.
+  "Packed",
   "Shipped", //Order has been dispatched.
   "Delivered", // Customer received the order.
   "Cancelled", //Order cancelled by customer or seller.
@@ -45,6 +46,7 @@ export const orderStatus = [
 ];
 export const ENUMOrderStatusArray = [
   "Processing",
+  "Packed",
   "Shipped",
   "Delivered",
   "Cancelled",
@@ -334,7 +336,7 @@ export interface IOrderMeta {
   id?: string;
   invoiceId: number;
   customerId: string;
-  status: string;
+  status: TOrderStatus;
   branch: string;
   saleValue: Prisma.Decimal; // Decimal
   deliveryfee?: Prisma.Decimal | null; // Decimal

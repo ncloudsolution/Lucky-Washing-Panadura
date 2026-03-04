@@ -14,11 +14,13 @@ export function AddNewDialog({
   triggerText = "New Product",
   form,
   mini,
+  width = "",
 }: {
   triggerBtn?: React.ReactNode;
   triggerText: string;
   form: React.ReactNode;
   mini?: boolean;
+  width?: string;
 }) {
   return (
     <Dialog>
@@ -37,7 +39,7 @@ export function AddNewDialog({
           )}
         </DialogTrigger>
       </TipWrapper>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className={` ${width ? width : "sm:max-w-[425px]"}`}>
         <DialogTitle className="hidden">{triggerText}</DialogTitle>
         {form}
       </DialogContent>

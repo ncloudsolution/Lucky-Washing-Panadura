@@ -1,6 +1,10 @@
 import { z } from "zod";
 import { multiInputSchema, phoneNumberSchema } from "./common";
-import { ENUMPaymentMethodArray, ENUMStaffRolesArray } from "@/data";
+import {
+  ENUMOrderStatusArray,
+  ENUMPaymentMethodArray,
+  ENUMStaffRolesArray,
+} from "@/data";
 
 export const StaffSchema = z
   .object({
@@ -65,7 +69,7 @@ export const CategorySchema = z.object({
         .nonempty({ message: "Category is required" })
         .min(2, { message: "Category at least 2 characters" })
         .max(50, "Must be less than 50 characters"),
-    })
+    }),
   ),
 });
 
@@ -104,3 +108,10 @@ export const IncomeSchema = (due: number) =>
         message: "Amount cannot exceed the due amount",
       }),
   });
+
+export const StatusSchema = z.object({
+  id: z.string().nonempty({ message: "orderId is required" }),
+  status: z.enum(ENUMOrderStatusArray, {
+    error: () => ({ message: "Status is required" }),
+  }),
+});
