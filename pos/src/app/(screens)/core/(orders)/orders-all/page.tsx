@@ -258,7 +258,7 @@ const AllOrders = () => {
 
       purifiedData.forEach((order, rowIndex) => {
         const cellAddress = `${saleValueColLetter}${rowIndex + 2}`;
-        const outstanding = order.outstanding as Number;
+        const outstanding = order.outstanding as number;
         const style = SALEVALUE_STYLES[String(outstanding === 0)];
 
         if (style && workSheet[cellAddress]) {
