@@ -3,6 +3,7 @@ import { LoaderBtn } from "@/components/custom/buttons/LoaderBtn";
 import NoRecordsCard from "@/components/custom/cards/NoRecordsCard";
 import { AddNewDialog } from "@/components/custom/dialogs/AddNewDialog";
 import { CustomDialog } from "@/components/custom/dialogs/CustomDialog";
+import { ExportDialog } from "@/components/custom/dialogs/ExportDialog";
 import FormStateChange from "@/components/custom/forms/FormStateChange";
 import { DatePickerWithRange } from "@/components/custom/inputs/DatePickerWithRange";
 import { SelectOnSearch } from "@/components/custom/inputs/SelectOnSearch";
@@ -50,6 +51,8 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import React, { useState } from "react";
 import { DateRange } from "react-day-picker";
+import { toast } from "sonner";
+import * as XLSX from "xlsx-js-style";
 
 export function getTodayRange(date: Date) {
   const from = new Date(date);
@@ -144,6 +147,219 @@ const AllOrders = () => {
     disableDefaultFilters,
   ]);
 
+  const handleExport = () => {
+    if (filteredOrders.length === 0) {
+      return toast.error("No data to export");
+    }
+
+    const purifiedData = filteredOrders.map((i) => {
+      const dateObj = new Date(i.createdAt); // make sure it's a Date
+      const date = dateObj.toLocaleDateString("en-CA"); // YYYY-MM-DD
+      const time = dateObj.toLocaleTimeString("en-GB", {
+        hour: "2-digit",
+        minute: "2-digit",
+      }); // HH:MM
+
+      return {
+        invoiceId: i.invoiceId,
+        branch: i.branch,
+        status: i.status,
+        saleValue: Number(i.saleValue),
+        outstanding: Number(i.saleValue) - Number(i.paymentAmount),
+        createdAt: `${date} ${time}`,
+      };
+    });
+
+    const STATUS_STYLES: Record<string, { bg: string; whiteText: boolean }> = {
+      Delivered: { bg: "1A54DA", whiteText: true },
+      Packed: { bg: "2F8F5A", whiteText: false },
+      Processing: { bg: "F4C430", whiteText: false },
+      Shipped: { bg: "FFA500", whiteText: false },
+      Cancelled: { bg: "E34A2F", whiteText: true },
+      Returned: { bg: "D3D3D3", whiteText: false },
+    };
+
+    const SALEVALUE_STYLES: Record<string, { bg: string; whiteText: boolean }> =
+      {
+        true: { bg: "1A54DA", whiteText: true },
+        false: { bg: "E34A2F", whiteText: true },
+      };
+
+    const OUTSTANDING_STYLES: Record<
+      string,
+      { bg: string; whiteText: boolean }
+    > = {
+      true: { bg: "FFB3B3", whiteText: false },
+    };
+
+    const formatDate = (date: Date) => date.toISOString().split("T")[0];
+    const from = formatDate(dates?.from as Date);
+    const to = formatDate(dates?.to as Date);
+
+    const workBook = XLSX.utils.book_new();
+    //const workSheet = XLSX.utils.json_to_sheet(purifiedData);
+    const workSheet = XLSX.utils.json_to_sheet(
+      purifiedData.map((order) =>
+        Object.fromEntries(
+          Object.entries(order).map(([key, value]) => [
+            key,
+            { v: value, s: { alignment: { horizontal: "center" } } },
+          ]),
+        ),
+      ),
+    );
+
+    const headers = Object.keys(purifiedData[0]);
+    const statusColIndex = headers.indexOf("status");
+    const saleValueColIndex = headers.indexOf("saleValue");
+    const outstandingColIndex = headers.indexOf("outstanding");
+
+    if (statusColIndex !== -1) {
+      const statusColLetter = XLSX.utils.encode_col(statusColIndex);
+
+      purifiedData.forEach((order, rowIndex) => {
+        const cellAddress = `${statusColLetter}${rowIndex + 2}`;
+        const status = order.status as string;
+        const style = STATUS_STYLES[status];
+
+        if (style && workSheet[cellAddress]) {
+          workSheet[cellAddress].s = {
+            fill: {
+              patternType: "solid",
+              fgColor: { rgb: style.bg },
+            },
+            font: {
+              bold: true,
+              ...(style.whiteText && { color: { rgb: "FFFFFF" } }),
+            },
+            alignment: {
+              horizontal: "center",
+            },
+          };
+        }
+      });
+
+      // const headerCell = `${statusColLetter}1`;
+      // if (workSheet[headerCell]) {
+      //   workSheet[headerCell].s = {
+      //     font: { bold: true },
+      //     alignment: { horizontal: "center" },
+      //   };
+      // }
+    }
+
+    if (saleValueColIndex !== -1) {
+      const saleValueColLetter = XLSX.utils.encode_col(saleValueColIndex);
+
+      purifiedData.forEach((order, rowIndex) => {
+        const cellAddress = `${saleValueColLetter}${rowIndex + 2}`;
+        const outstanding = order.outstanding as Number;
+        const style = SALEVALUE_STYLES[String(outstanding === 0)];
+
+        if (style && workSheet[cellAddress]) {
+          workSheet[cellAddress].s = {
+            fill: {
+              patternType: "solid",
+              fgColor: { rgb: style.bg },
+            },
+            font: {
+              bold: true,
+              ...(style.whiteText && { color: { rgb: "FFFFFF" } }),
+            },
+            alignment: {
+              horizontal: "center",
+            },
+          };
+        }
+      });
+
+      // const headerCell = `${saleValueColLetter}1`;
+      // if (workSheet[headerCell]) {
+      //   workSheet[headerCell].s = {
+      //     font: { bold: true },
+      //     alignment: { horizontal: "center" },
+      //   };
+      // }
+    }
+
+    if (outstandingColIndex !== -1) {
+      const outstandingColLetter = XLSX.utils.encode_col(outstandingColIndex);
+
+      purifiedData.forEach((order, rowIndex) => {
+        const cellAddress = `${outstandingColLetter}${rowIndex + 2}`;
+        const outstanding = order.outstanding as number;
+
+        if (outstanding <= 0) return; // ✅ skip coloring if no outstanding
+
+        const style = OUTSTANDING_STYLES[String(outstanding > 0)];
+        if (style && workSheet[cellAddress]) {
+          workSheet[cellAddress].s = {
+            fill: {
+              patternType: "solid",
+              fgColor: { rgb: style.bg },
+            },
+            font: {
+              bold: true,
+              ...(style.whiteText && { color: { rgb: "FFFFFF" } }),
+            },
+            alignment: {
+              horizontal: "center",
+            },
+          };
+        }
+      });
+
+      // const headerCell = `${statusColLetter}1`;
+      // if (workSheet[headerCell]) {
+      //   workSheet[headerCell].s = {
+      //     font: { bold: true },
+      //     alignment: { horizontal: "center" },
+      //   };
+      // }
+    }
+
+    //column width
+    workSheet["!cols"] = headers.map(() => ({ wch: 20 }));
+
+    // Convert to Excel Table
+    workSheet["!autofilter"] = { ref: workSheet["!ref"]! };
+
+    const tableRef = workSheet["!ref"]!;
+    workSheet["!tables"] = [
+      {
+        ref: tableRef,
+        name: "OrdersTable",
+        displayName: "OrdersTable",
+        headerRowCount: 1,
+        totalsRowCount: 0,
+        tableStyleInfo: {
+          name: "TableStyleMedium2", // Excel built-in table style
+          showFirstColumn: false,
+          showLastColumn: false,
+          showRowStripes: true,
+          showColumnStripes: false,
+        },
+      },
+    ];
+
+    // Style header row
+    headers.forEach((_, colIndex) => {
+      const headerCell = XLSX.utils.encode_cell({ r: 0, c: colIndex });
+      if (workSheet[headerCell]) {
+        workSheet[headerCell].s = {
+          fill: { patternType: "solid", fgColor: { rgb: "1E1E2D" } },
+          font: { bold: true, color: { rgb: "FFFFFF" } },
+          alignment: { horizontal: "center" },
+        };
+      }
+    });
+
+    XLSX.utils.book_append_sheet(workBook, workSheet, "Orders Sheet");
+    XLSX.writeFile(workBook, `Orders---${from}---${to}.xlsx`);
+
+    toast.success("Data exported successfully");
+  };
+
   return (
     <div className="flex flex-col h-full w-full min-w-7xl text-sm overflow-x-auto no-scrollbar">
       <div className="w-full flex justify-between">
@@ -204,14 +420,15 @@ const AllOrders = () => {
             />
           </div>
 
-          {/* <TipWrapper triggerText="Export as Excel">
-            <Button
-              disabled={isLoading || isLoadingDebounce || disableDefaultFilters}
-              className="flex gap-2 disabled:bg-gray-500 bg-green-700 hover:bg-green-700 text-white rounded-sm w-[150px]"
-            >
-              <Sheet /> Export
-            </Button>
-          </TipWrapper> */}
+          <TipWrapper triggerText="Export as Excel">
+            <ExportDialog
+              title="Export the Order Data"
+              description={`${filteredOrders?.length} Records ready to export as filterd`}
+              loading={isLoading || isLoadingDebounce || disableDefaultFilters}
+              handleExport={handleExport}
+              content={<div className="py-3">hi</div>}
+            />
+          </TipWrapper>
         </div>
         {filteredOrders && !isLoading && !isLoadingDebounce ? (
           <div className="flex flex-col justify-center items-center text-superbase">
