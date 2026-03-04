@@ -31,6 +31,7 @@ import { useDebounce } from "@/hooks/useDebounce";
 import { BasicDataFetch, formatDate } from "@/utils/common";
 import { AlertDialogAction } from "@radix-ui/react-alert-dialog";
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { format } from "date-fns";
 import {
   BadgeCheck,
   Check,
@@ -165,7 +166,11 @@ const AllOrders = () => {
         branch: i.branch,
         status: i.status,
         saleValue: Number(i.saleValue),
-        outstanding: Number(i.saleValue) - Number(i.paymentAmount),
+        outstanding:
+          Number(i.saleValue) +
+          Number(i.deliveryfee ?? 0) -
+          Number(i.paymentAmount),
+        deliveryfee: Number(i.deliveryfee),
         createdAt: `${date} ${time}`,
       };
     });
@@ -422,11 +427,53 @@ const AllOrders = () => {
 
           <TipWrapper triggerText="Export as Excel">
             <ExportDialog
+              noofRecords={filteredOrders.length}
               title="Export the Order Data"
-              description={`${filteredOrders?.length} Records ready to export as filterd`}
+              description={`Records ready to export as selected filtered`}
               loading={isLoading || isLoadingDebounce || disableDefaultFilters}
               handleExport={handleExport}
-              content={<div className="py-3">hi</div>}
+              content={
+                <div className="flex flex-col gap-2 py-3">
+                  <div className="flex flex-col gap-1">
+                    <div className="flex w-full justify-between">
+                      <div className="font-semibold">Date Range</div>
+                      <div className="text-muted-foreground">
+                        {dates?.from ? format(dates.from, "LLL dd, y") : ""} -{" "}
+                        {dates?.to ? format(dates.to, "LLL dd, y") : ""}
+                      </div>
+                    </div>
+                    <div className="flex w-full justify-between">
+                      <div className="font-semibold">Payment Status</div>
+                      <div className="text-muted-foreground">
+                        {paymentStatus}
+                      </div>
+                    </div>
+                    <div className="flex w-full justify-between">
+                      <div className="font-semibold">Order Status</div>
+                      <div className="text-muted-foreground">{odStatus}</div>
+                    </div>
+                    <div className="flex w-full justify-between">
+                      <div className="font-semibold">
+                        Invoice No Starting from
+                      </div>
+                      <div className="text-muted-foreground">
+                        {debouncedQuery}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex w-full justify-between text-green-700">
+                    <div className="font-semibold">No of Records</div>
+                    <div>{filteredOrders.length}</div>
+                  </div>
+
+                  <div className="text-muted-foreground text-sm">
+                    If your selected filters won’t meet your export needs,
+                    please cancel, adjust the filters on the Orders main screen,
+                    and try exporting again
+                  </div>
+                </div>
+              }
             />
           </TipWrapper>
         </div>

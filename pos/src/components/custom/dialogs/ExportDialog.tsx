@@ -12,6 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Sheet } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
 
 export function ExportDialog({
   title,
@@ -19,12 +20,14 @@ export function ExportDialog({
   content,
   loading,
   handleExport,
+  noofRecords,
 }: {
   title: string;
   description: string;
   loading: boolean;
   content: React.ReactNode;
   handleExport: () => void;
+  noofRecords: number;
 }) {
   const [open, setOpen] = useState(false);
 
@@ -33,6 +36,12 @@ export function ExportDialog({
       <AlertDialogTrigger asChild>
         <Button
           disabled={loading}
+          onClick={(e) => {
+            if (noofRecords === 0) {
+              e.preventDefault(); // prevent the dialog from opening
+              toast.error("No data to export");
+            }
+          }}
           className="flex gap-2 disabled:bg-gray-500 bg-green-700 hover:bg-green-700 text-white rounded-sm w-[150px]"
         >
           <Sheet /> Export
