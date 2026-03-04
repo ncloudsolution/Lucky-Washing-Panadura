@@ -46,6 +46,17 @@ const FormStateChange = ({
 
   const queryClient = useQueryClient();
 
+  function DueAmount() {
+    const x =
+      Number(data?.saleValue ?? 0) +
+      Number(data.deliveryfee ?? 0) -
+      Number(data.paymentAmount ?? 0);
+
+    return x;
+  }
+  const dueAmount = DueAmount();
+  const haveDue = dueAmount > 0;
+
   const onSubmit = async (formValues: FormFields) => {
     console.log(formValues);
     const start = performance.now();
@@ -109,6 +120,15 @@ const FormStateChange = ({
     >
       <Form {...formMethods}>
         <form onSubmit={handleSubmit(onSubmit)}>
+          <div
+            className={`p-4 ${dueAmount > 0 ? "bg-[#ff00004d] border-[#ff00007a]" : "bg-[#73de004d] border-[#73de007a]"} border-1 mt-2 rounded-sm text-center font-semibold`}
+          >
+            Payment Due :{" "}
+            {new Intl.NumberFormat("en-US", {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            }).format(dueAmount)}
+          </div>
           <div className="flex flex-col gap-2 w-full pt-4">
             <div className="flex flex-col gap-2 py-1">
               <FormLabel className="font-semibold text-[12px] xxs:text-[14px] flex items-center">
@@ -117,7 +137,7 @@ const FormStateChange = ({
               <div className="flex w-full gap-3 justify-between">
                 {statusArray.map((opt, index) => (
                   <Button
-                    disabled={opt.name === data.status}
+                    disabled={haveDue && opt.name === "Delivered"}
                     type="button"
                     onClick={() => {
                       if (status !== opt.name) {
