@@ -2,7 +2,7 @@ import { auth } from "@/auth";
 import { IExpense } from "@/components/custom/forms/FormExpense";
 import { hasPermission, T_Role } from "@/data/permissions";
 import prisma from "@/prisma/client";
-import { backendDataValidation } from "@/utils/common";
+import { backendDataValidation, getNewDateRange } from "@/utils/common";
 import { ExpenseSchema } from "@/utils/validations/company";
 import { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
@@ -28,7 +28,7 @@ export const POST = auth(async function POST(req) {
         message: "you are not authenticated",
         error: "UNAUTHORIZED",
       },
-      { status: 401 }
+      { status: 401 },
     );
   }
 
@@ -46,7 +46,7 @@ export const POST = auth(async function POST(req) {
   ) {
     return NextResponse.json(
       { success: false, message: "Not authorized" },
-      { status: 403 }
+      { status: 403 },
     );
   }
 
@@ -62,7 +62,7 @@ export const POST = auth(async function POST(req) {
         message: `Expense recorded successsfully`,
         data: exp.id,
       },
-      { status: 201 }
+      { status: 201 },
     );
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
@@ -81,18 +81,19 @@ export const POST = auth(async function POST(req) {
               ? error
               : String(error),
         },
-        { status: 500 }
+        { status: 500 },
       );
     } else {
       return NextResponse.json(
         { message: "An unknown error occurred." },
-        { status: 500 }
+        { status: 500 },
       );
     }
   }
 });
 
 export const GET = auth(async function GET(req: any) {
+  const { searchParams } = new URL(req.url);
   if (!req.auth) {
     return NextResponse.json(
       {
@@ -100,7 +101,7 @@ export const GET = auth(async function GET(req: any) {
         message: "you are not authenticated",
         error: "UNAUTHORIZED",
       },
-      { status: 401 }
+      { status: 401 },
     );
   }
 
@@ -118,25 +119,35 @@ export const GET = auth(async function GET(req: any) {
   ) {
     return NextResponse.json(
       { success: false, message: "Not authorized" },
-      { status: 403 }
+      { status: 403 },
     );
   }
 
+  const fromParam = searchParams.get("from");
+  const toParam = searchParams.get("to");
+
+  const dateRange = {
+    from: fromParam ? new Date(fromParam) : undefined,
+    to: toParam ? new Date(toParam) : undefined,
+  };
+
   try {
-    const orderMetas = await prisma.expense.findMany({
+    const expenseMetas = await prisma.expense.findMany({
+      where: {
+        createdAt: getNewDateRange(dateRange),
+      },
       orderBy: {
         createdAt: "desc",
       },
-      take: 10,
     });
 
     return NextResponse.json(
       {
         success: true,
         message: "Recent expenses fetch successfully!",
-        data: orderMetas,
+        data: expenseMetas,
       },
-      { status: 200 }
+      { status: 200 },
     );
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
@@ -155,12 +166,12 @@ export const GET = auth(async function GET(req: any) {
               ? error
               : String(error),
         },
-        { status: 500 }
+        { status: 500 },
       );
     } else {
       return NextResponse.json(
         { message: "An unknown error occurred." },
-        { status: 500 }
+        { status: 500 },
       );
     }
   }
@@ -192,7 +203,7 @@ export const PUT = auth(async function POST(req: any) {
           message: "You are not authenticated",
           error: "UNAUTHORIZED",
         },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -211,7 +222,7 @@ export const PUT = auth(async function POST(req: any) {
     ) {
       return NextResponse.json(
         { success: false, message: "Not authorized" },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
@@ -227,12 +238,12 @@ export const PUT = auth(async function POST(req: any) {
         message: "Expense updated successfully",
         data: updatedProduct,
       },
-      { status: 200 }
+      { status: 200 },
     );
   } catch (err) {
     return NextResponse.json(
       { success: false, message: "Internal Server Error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 });
@@ -249,7 +260,7 @@ export const DELETE = auth(async function DELETE(req) {
           message: "you are not authenticated",
           error: "UNAUTHORIZED",
         },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -268,7 +279,7 @@ export const DELETE = auth(async function DELETE(req) {
     ) {
       return NextResponse.json(
         { success: false, message: "Not authorized" },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
@@ -284,7 +295,7 @@ export const DELETE = auth(async function DELETE(req) {
         message: `  Expense deleted sucessfully`,
         data: null,
       },
-      { status: 200 }
+      { status: 200 },
     );
   } catch (error) {
     let message = "Internal server error";
@@ -300,7 +311,7 @@ export const DELETE = auth(async function DELETE(req) {
         success: false,
         message,
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 });

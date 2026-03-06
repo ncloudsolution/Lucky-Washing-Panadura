@@ -25,6 +25,8 @@ import {
 } from "lucide-react";
 import SelectInput from "../inputs/SelectInput";
 import { useSession } from "next-auth/react";
+import { getTodayRange } from "@/app/(screens)/core/(orders)/orders-all/page";
+import { DateRange } from "react-day-picker";
 
 export interface IExpense {
   id?: string;
@@ -47,10 +49,12 @@ const FormExpense = ({
   data,
   type = "new",
   expenseArray,
+  dates,
 }: {
   data?: IExpense;
   type?: "edit" | "new";
   expenseArray: string[];
+  dates: DateRange;
 }) => {
   const { data: session, status } = useSession();
 
@@ -120,43 +124,47 @@ const FormExpense = ({
       // 2 - ✅ Close the dialog after submission
       closeRef.current?.click();
 
-      if (type === "new") {
-        queryClient.setQueryData(["recent-expenses"], (oldData: any) => {
-          const oldArray: IExpense[] = oldData?.data ?? [];
+      await queryClient.invalidateQueries({
+        queryKey: ["expenses", dates],
+      });
 
-          const newData: IExpense = {
-            ...formValues, // 👈 use API response if available
-            amount: Number(formValues.amount),
-            id: res.data,
-            createdAt: new Date(),
-          };
+      // if (type === "new") {
+      //   queryClient.setQueryData(["recent-expenses"], (oldData: any) => {
+      //     const oldArray: IExpense[] = oldData?.data ?? [];
 
-          return {
-            ...oldData,
-            data: [newData, ...oldArray],
-          };
-        });
-      } else {
-        queryClient.setQueryData(["recent-expenses"], (oldData: any) => {
-          const oldArray: IExpense[] = oldData?.data ?? [];
-          const newArray = oldArray.map((i) =>
-            i.id !== data?.id
-              ? i
-              : {
-                  ...i,
-                  category: formValues.category,
-                  amount: formValues.amount,
-                  paymentMethod: formValues.paymentMethod,
-                  remarks: formValues.remarks,
-                }
-          );
+      //     const newData: IExpense = {
+      //       ...formValues, // 👈 use API response if available
+      //       amount: Number(formValues.amount),
+      //       id: res.data,
+      //       createdAt: new Date(),
+      //     };
 
-          return {
-            ...oldData,
-            data: newArray,
-          };
-        });
-      }
+      //     return {
+      //       ...oldData,
+      //       data: [newData, ...oldArray],
+      //     };
+      //   });
+      // } else {
+      //   queryClient.setQueryData(["recent-expenses"], (oldData: any) => {
+      //     const oldArray: IExpense[] = oldData?.data ?? [];
+      //     const newArray = oldArray.map((i) =>
+      //       i.id !== data?.id
+      //         ? i
+      //         : {
+      //             ...i,
+      //             category: formValues.category,
+      //             amount: formValues.amount,
+      //             paymentMethod: formValues.paymentMethod,
+      //             remarks: formValues.remarks,
+      //           },
+      //     );
+
+      //     return {
+      //       ...oldData,
+      //       data: newArray,
+      //     };
+      //   });
+      // }
 
       // res already contains parsed JSON from BasicDataFetch
       toast.success(res.message);
