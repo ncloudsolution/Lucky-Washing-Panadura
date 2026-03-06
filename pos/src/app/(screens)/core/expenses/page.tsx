@@ -34,7 +34,6 @@ const Expenses = () => {
     getTodayRange(new Date()),
   );
 
-  const [hasSearched, setHasSearched] = useState(false);
   const queryClient = useQueryClient();
   const [expCategory, setExpCategory] = useState("All");
   const [paymentmode, setPaymentMode] = useState("All");
@@ -85,34 +84,11 @@ const Expenses = () => {
     staleTime: 1000 * 60 * 5,
   });
 
-  // Handle settled state with useEffect
-  React.useEffect(() => {
-    if (!isLoading && hasSearched) {
-      setHasSearched(false);
-    }
-  }, [isLoading, hasSearched]);
-
-  // const finalArray = recentExpenses?.filter(
-  //   (ex) =>
-  //     ex.name.toLowerCase().includes(search.toLowerCase()) ||
-  //     ex.mobile.includes(search)
-  // );
-
   const filteredExpenses = React.useMemo(() => {
     // Default filtering
     if (!expenses) return [];
 
     return expenses.filter((i) => {
-      // const due =
-      //   Number(i?.saleValue ?? 0) +
-      //   Number(i?.deliveryfee ?? 0) -
-      //   Number(i?.paymentAmount ?? 0);
-
-      // const paymentMatch =
-      //   paymentStatus === "All" ||
-      //   (paymentStatus === "Settled" && due === 0) ||
-      //   (paymentStatus === "Outstanding" && due > 0);
-
       const categoryMatch = expCategory === "All" || expCategory === i.category;
       const paymentModeMatch =
         paymentmode === "All" || paymentmode === i.paymentMethod;
@@ -169,23 +145,10 @@ const Expenses = () => {
               />
             </div>
 
-            {/* 
-            <div className="flex w-full flex-col gap-1.5">
-              <FieldLabel htmlFor="date-picker-range">
-                Search By Invoice No
-              </FieldLabel>
-              <Input
-                value={query}
-                disabled={isLoading || isLoadingDebounce}
-                className="bg-superbase disabled:bg-gray-500 text-white"
-                onChange={(e) => setQuery(e.target.value)}
-              />
-            </div> */}
-
             <TipWrapper triggerText="Export as Excel">
               <ExportDialog
                 noofRecords={filteredExpenses.length}
-                title="Export the Order Data"
+                title="Export the Expense Data"
                 description={`Records ready to export as selected filtered`}
                 loading={isLoading || isExpenseArray}
                 handleExport={handleExport}
@@ -205,18 +168,12 @@ const Expenses = () => {
                           {expCategory}
                         </div>
                       </div>
-                      {/* <div className="flex w-full justify-between">
-                        <div className="font-semibold">Order Status</div>
-                        <div className="text-muted-foreground">{odStatus}</div>
-                      </div> */}
-                      {/* <div className="flex w-full justify-between">
-                        <div className="font-semibold">
-                          Invoice No Starting from
-                        </div>
+                      <div className="flex w-full justify-between">
+                        <div className="font-semibold">Payment Mode</div>
                         <div className="text-muted-foreground">
-                          {debouncedQuery}
+                          {paymentmode}
                         </div>
-                      </div> */}
+                      </div>
                     </div>
 
                     <div className="flex w-full justify-between text-green-700">
@@ -374,22 +331,9 @@ const Expenses = () => {
                                 data: { id: ex.id },
                               });
 
-                              queryClient.setQueryData(
-                                ["recent-expenses"],
-                                (oldData: any) => {
-                                  const oldArray: IExpense[] =
-                                    oldData?.data ?? [];
-
-                                  const filterd = oldArray.filter(
-                                    (i) => i.id !== ex.id,
-                                  );
-
-                                  return {
-                                    ...oldData,
-                                    data: filterd,
-                                  };
-                                },
-                              );
+                              await queryClient.invalidateQueries({
+                                queryKey: ["expenses", dates],
+                              });
 
                               toast.success(res.message);
                             } catch (err) {
