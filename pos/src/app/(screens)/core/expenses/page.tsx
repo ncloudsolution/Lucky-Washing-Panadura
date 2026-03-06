@@ -26,8 +26,9 @@ import { FieldLabel } from "@/components/ui/field";
 import { TipWrapper } from "@/components/custom/wrapper/TipWrapper";
 import { ExportDialog } from "@/components/custom/dialogs/ExportDialog";
 import { format } from "date-fns";
-import { PaymentMethod } from "@/data";
+import { PaymentMethod, TPaymentMethod } from "@/data";
 import TextSkeleton from "@/components/custom/skeleton/TextSkeleton";
+import * as XLSX from "xlsx-js-style";
 
 const Expenses = () => {
   const [dates, setDates] = React.useState<DateRange | undefined>(
@@ -96,8 +97,135 @@ const Expenses = () => {
       return categoryMatch && paymentModeMatch;
     });
   }, [expenses, expCategory, paymentmode]);
+  console.log(filteredExpenses);
+  const handleExport = () => {
+    if (filteredExpenses.length === 0) {
+      return toast.error("No data to export");
+    }
 
-  const handleExport = () => {};
+    const purifiedData = filteredExpenses.map((i) => {
+      const dateObj = new Date(i.createdAt); // make sure it's a Date
+      const date = dateObj.toLocaleDateString("en-CA"); // YYYY-MM-DD
+      const time = dateObj.toLocaleTimeString("en-GB", {
+        hour: "2-digit",
+        minute: "2-digit",
+      }); // HH:MM
+
+      return {
+        ...i,
+        createdAt: `${date} ${time}`,
+      };
+    });
+
+    console.log(purifiedData);
+
+    const PAYMENT_METHOD_STYLES: Record<
+      string,
+      { bg: string; whiteText: boolean }
+    > = {
+      Cash: { bg: "1A54DA", whiteText: true },
+      Card: { bg: "104E64", whiteText: true },
+      Bank: { bg: "F4C430", whiteText: false },
+      Credit: { bg: "E34A2F", whiteText: false },
+    };
+
+    const formatDate = (date: Date) => date.toISOString().split("T")[0];
+    const from = formatDate(dates?.from as Date);
+    const to = formatDate(dates?.to as Date);
+
+    const workBook = XLSX.utils.book_new();
+    const workSheet = XLSX.utils.json_to_sheet(purifiedData);
+    const range = XLSX.utils.decode_range(workSheet["!ref"]!);
+
+    for (let R = 1; R <= range.e.r; ++R) {
+      for (let C = 0; C <= range.e.c; ++C) {
+        const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+
+        if (!workSheet[cellAddress]) continue;
+
+        workSheet[cellAddress].s = {
+          alignment: { horizontal: "center" },
+        };
+      }
+    }
+    const headers = Object.keys(purifiedData[0]);
+    const paymentMethodColIndex = headers.indexOf("paymentMethod");
+
+    if (paymentMethodColIndex !== -1) {
+      const statusColLetter = XLSX.utils.encode_col(paymentMethodColIndex);
+
+      purifiedData.forEach((expense, rowIndex) => {
+        const cellAddress = `${statusColLetter}${rowIndex + 2}`;
+        const method = expense.paymentMethod as TPaymentMethod;
+        const style = PAYMENT_METHOD_STYLES[method];
+
+        if (style && workSheet[cellAddress]) {
+          workSheet[cellAddress].s = {
+            fill: {
+              patternType: "solid",
+              fgColor: { rgb: style.bg },
+            },
+            font: {
+              bold: true,
+              ...(style.whiteText && { color: { rgb: "FFFFFF" } }),
+            },
+            alignment: {
+              horizontal: "center",
+            },
+          };
+        }
+      });
+
+      // const headerCell = `${statusColLetter}1`;
+      // if (workSheet[headerCell]) {
+      //   workSheet[headerCell].s = {
+      //     font: { bold: true },
+      //     alignment: { horizontal: "center" },
+      //   };
+      // }
+    }
+
+    //column width
+    workSheet["!cols"] = headers.map(() => ({ wch: 20 }));
+
+    // Convert to Excel Table
+    workSheet["!autofilter"] = { ref: workSheet["!ref"]! };
+
+    const tableRef = workSheet["!ref"]!;
+    workSheet["!tables"] = [
+      {
+        ref: tableRef,
+        name: "ExpensesTable",
+        displayName: "ExpensesTable",
+        headerRowCount: 1,
+        totalsRowCount: 0,
+        tableStyleInfo: {
+          name: "TableStyleMedium2", // Excel built-in table style
+          showFirstColumn: false,
+          showLastColumn: false,
+          showRowStripes: true,
+          showColumnStripes: false,
+        },
+      },
+    ];
+
+    // Style header row
+    headers.forEach((_, colIndex) => {
+      const headerCell = XLSX.utils.encode_cell({ r: 0, c: colIndex });
+      if (workSheet[headerCell]) {
+        workSheet[headerCell].s = {
+          fill: { patternType: "solid", fgColor: { rgb: "1E1E2D" } },
+          font: { bold: true, color: { rgb: "FFFFFF" } },
+          alignment: { horizontal: "center" },
+        };
+      }
+    });
+
+    XLSX.utils.book_append_sheet(workBook, workSheet, "Expenses Sheet");
+    XLSX.writeFile(workBook, `Expenses---${from}---${to}.xlsx`);
+
+    toast.success("Data exported successfully");
+  };
 
   return (
     <div className="flex relative w-full text-sm">

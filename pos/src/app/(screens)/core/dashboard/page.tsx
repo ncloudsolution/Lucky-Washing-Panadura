@@ -173,7 +173,9 @@ const Dashboard = () => {
               ? "var(--color-superbase)"
               : item.type === "Credit"
                 ? "var(--color-destructive)"
-                : `var(--chart-${index + 1})`,
+                : item.type === "Card"
+                  ? `var(--chart-4)`
+                  : `var(--chart-3)`,
         })) ?? [];
 
     return breakdown;
