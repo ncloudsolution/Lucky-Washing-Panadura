@@ -104,20 +104,23 @@ const Expenses = () => {
     }
 
     const purifiedData = filteredExpenses.map((i) => {
-      const dateObj = new Date(i.createdAt); // make sure it's a Date
-      const date = dateObj.toLocaleDateString("en-CA"); // YYYY-MM-DD
+      const dateObj = new Date(i.createdAt);
+      const date = dateObj.toLocaleDateString("en-CA");
       const time = dateObj.toLocaleTimeString("en-GB", {
         hour: "2-digit",
         minute: "2-digit",
-      }); // HH:MM
+      });
 
       return {
-        ...i,
-        createdAt: `${date} ${time}`,
+        branch: i.branch,
+        category: i.category,
+        amount: Number(i.amount),
+        paymentMethod: i.paymentMethod,
+        remarks: i.remarks,
+        date: date,
+        time: time,
       };
     });
-
-    console.log(purifiedData);
 
     const PAYMENT_METHOD_STYLES: Record<
       string,
@@ -126,7 +129,7 @@ const Expenses = () => {
       Cash: { bg: "1A54DA", whiteText: true },
       Card: { bg: "104E64", whiteText: true },
       Bank: { bg: "F4C430", whiteText: false },
-      Credit: { bg: "E34A2F", whiteText: false },
+      Credit: { bg: "E34A2F", whiteText: true },
     };
 
     const formatDate = (date: Date) => date.toISOString().split("T")[0];
@@ -134,84 +137,82 @@ const Expenses = () => {
     const to = formatDate(dates?.to as Date);
 
     const workBook = XLSX.utils.book_new();
-    const workSheet = XLSX.utils.json_to_sheet(purifiedData);
-    const range = XLSX.utils.decode_range(workSheet["!ref"]!);
+    const workSheet: XLSX.WorkSheet = {};
 
-    for (let R = 1; R <= range.e.r; ++R) {
-      for (let C = 0; C <= range.e.c; ++C) {
-        const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+    const expensesStartRow = 8;
 
-        if (!workSheet[cellAddress]) continue;
+    // ------------------- Breakdown Table FIRST -------------------
+    const excelDataStartRow = expensesStartRow + 2; // 10 (1-based)
+    const excelDataEndRow = excelDataStartRow + purifiedData.length - 1;
 
-        workSheet[cellAddress].s = {
+    const makeFormula = (method: string) =>
+      `SUMPRODUCT((D${excelDataStartRow}:D${excelDataEndRow}="${method}")*(C${excelDataStartRow}:C${excelDataEndRow})*SUBTOTAL(103,OFFSET(D${excelDataStartRow},ROW(D${excelDataStartRow}:D${excelDataEndRow})-ROW(D${excelDataStartRow}),0)))`;
+
+    const breakdownRows = [
+      { "Payment Method": "Cash", Amount: { f: makeFormula("Cash") } },
+      { "Payment Method": "Card", Amount: { f: makeFormula("Card") } },
+      { "Payment Method": "Bank", Amount: { f: makeFormula("Bank") } },
+      { "Payment Method": "Credit", Amount: { f: makeFormula("Credit") } },
+      { "Payment Method": "TOTAL", Amount: { f: "SUM(B2:B5)" } },
+    ];
+
+    XLSX.utils.sheet_add_json(workSheet, breakdownRows, { origin: "A1" });
+
+    // Style Breakdown header (row 0)
+    ["Payment Method", "Amount"].forEach((_, i) => {
+      const cell = XLSX.utils.encode_cell({ r: 0, c: i });
+      if (workSheet[cell]) {
+        workSheet[cell].s = {
+          fill: { patternType: "solid", fgColor: { rgb: "1E1E2D" } },
+          font: { bold: true, color: { rgb: "FFFFFF" } },
           alignment: { horizontal: "center" },
         };
       }
+    });
+
+    // Payment method colors for breakdown rows
+    PaymentMethod.forEach((method, i) => {
+      const row = i + 1;
+      const cell = XLSX.utils.encode_cell({ r: row, c: 0 });
+      const style = PAYMENT_METHOD_STYLES[method];
+      if (style && workSheet[cell]) {
+        workSheet[cell].s = {
+          fill: { patternType: "solid", fgColor: { rgb: style.bg } },
+          font: {
+            bold: true,
+            ...(style.whiteText && { color: { rgb: "FFFFFF" } }),
+          },
+          alignment: { horizontal: "center" },
+        };
+      }
+    });
+
+    // TOTAL row style (black) — row 5
+    const totalRow = XLSX.utils.encode_cell({ r: 5, c: 0 });
+    if (workSheet[totalRow]) {
+      workSheet[totalRow].s = {
+        fill: { patternType: "solid", fgColor: { rgb: "e3dddc" } },
+        font: { bold: true, color: { rgb: "000000" } },
+        alignment: { horizontal: "center" },
+      };
     }
+
+    // ------------------- Expenses Table BELOW (gap of 1 row) -------------------
+    // Breakdown: rows 0–5 (header + 4 methods + total) → gap row 6 → expenses start row 7
+
+    XLSX.utils.sheet_add_json(workSheet, purifiedData, {
+      origin: XLSX.utils.encode_cell({ r: expensesStartRow, c: 0 }),
+      skipHeader: false,
+    });
+
     const headers = Object.keys(purifiedData[0]);
-    const paymentMethodColIndex = headers.indexOf("paymentMethod");
 
-    if (paymentMethodColIndex !== -1) {
-      const statusColLetter = XLSX.utils.encode_col(paymentMethodColIndex);
-
-      purifiedData.forEach((expense, rowIndex) => {
-        const cellAddress = `${statusColLetter}${rowIndex + 2}`;
-        const method = expense.paymentMethod as TPaymentMethod;
-        const style = PAYMENT_METHOD_STYLES[method];
-
-        if (style && workSheet[cellAddress]) {
-          workSheet[cellAddress].s = {
-            fill: {
-              patternType: "solid",
-              fgColor: { rgb: style.bg },
-            },
-            font: {
-              bold: true,
-              ...(style.whiteText && { color: { rgb: "FFFFFF" } }),
-            },
-            alignment: {
-              horizontal: "center",
-            },
-          };
-        }
-      });
-
-      // const headerCell = `${statusColLetter}1`;
-      // if (workSheet[headerCell]) {
-      //   workSheet[headerCell].s = {
-      //     font: { bold: true },
-      //     alignment: { horizontal: "center" },
-      //   };
-      // }
-    }
-
-    //column width
-    workSheet["!cols"] = headers.map(() => ({ wch: 20 }));
-
-    // Convert to Excel Table
-    workSheet["!autofilter"] = { ref: workSheet["!ref"]! };
-
-    const tableRef = workSheet["!ref"]!;
-    workSheet["!tables"] = [
-      {
-        ref: tableRef,
-        name: "ExpensesTable",
-        displayName: "ExpensesTable",
-        headerRowCount: 1,
-        totalsRowCount: 0,
-        tableStyleInfo: {
-          name: "TableStyleMedium2", // Excel built-in table style
-          showFirstColumn: false,
-          showLastColumn: false,
-          showRowStripes: true,
-          showColumnStripes: false,
-        },
-      },
-    ];
-
-    // Style header row
+    // Style expenses header row
     headers.forEach((_, colIndex) => {
-      const headerCell = XLSX.utils.encode_cell({ r: 0, c: colIndex });
+      const headerCell = XLSX.utils.encode_cell({
+        r: expensesStartRow,
+        c: colIndex,
+      });
       if (workSheet[headerCell]) {
         workSheet[headerCell].s = {
           fill: { patternType: "solid", fgColor: { rgb: "1E1E2D" } },
@@ -220,6 +221,80 @@ const Expenses = () => {
         };
       }
     });
+
+    // Style expenses data rows
+    const expensesRange = XLSX.utils.decode_range(workSheet["!ref"]!);
+    for (let R = expensesStartRow + 1; R <= expensesRange.e.r; ++R) {
+      for (let C = 0; C <= headers.length - 1; ++C) {
+        const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+        if (!workSheet[cellAddress]) continue;
+        workSheet[cellAddress].s = { alignment: { horizontal: "center" } };
+      }
+    }
+
+    // Payment method colors for expenses rows
+    const paymentMethodColIndex = headers.indexOf("paymentMethod");
+    if (paymentMethodColIndex !== -1) {
+      const statusColLetter = XLSX.utils.encode_col(paymentMethodColIndex);
+      purifiedData.forEach((expense, rowIndex) => {
+        const cellAddress = `${statusColLetter}${expensesStartRow + rowIndex + 2}`;
+        const method = expense.paymentMethod as TPaymentMethod;
+        const style = PAYMENT_METHOD_STYLES[method];
+        if (style && workSheet[cellAddress]) {
+          workSheet[cellAddress].s = {
+            fill: { patternType: "solid", fgColor: { rgb: style.bg } },
+            font: {
+              bold: true,
+              ...(style.whiteText && { color: { rgb: "FFFFFF" } }),
+            },
+            alignment: { horizontal: "center" },
+          };
+        }
+      });
+    }
+
+    // Column widths
+    workSheet["!cols"] = headers.map(() => ({ wch: 20 }));
+
+    // Autofilter on expenses table only
+    const expensesHeaderRef = XLSX.utils.encode_cell({
+      r: expensesStartRow,
+      c: 0,
+    });
+    const expensesEndRef = XLSX.utils.encode_cell({
+      r: expensesRange.e.r,
+      c: headers.length - 1,
+    });
+    workSheet["!autofilter"] = {
+      ref: `${expensesHeaderRef}:${expensesEndRef}`,
+    };
+
+    const breakdownRef = "A1:B6";
+    const expensesRef = `${expensesHeaderRef}:${expensesEndRef}`;
+
+    workSheet["!tables"] = [
+      {
+        ref: breakdownRef,
+        name: "BreakdownTable",
+        displayName: "BreakdownTable",
+        headerRowCount: 1,
+        tableStyleInfo: { name: "TableStyleMedium2", showRowStripes: true },
+      },
+      {
+        ref: expensesRef,
+        name: "ExpensesTable",
+        displayName: "ExpensesTable",
+        headerRowCount: 1,
+        totalsRowCount: 0,
+        tableStyleInfo: {
+          name: "TableStyleMedium2",
+          showFirstColumn: false,
+          showLastColumn: false,
+          showRowStripes: true,
+          showColumnStripes: false,
+        },
+      },
+    ];
 
     XLSX.utils.book_append_sheet(workBook, workSheet, "Expenses Sheet");
     XLSX.writeFile(workBook, `Expenses---${from}---${to}.xlsx`);
