@@ -202,17 +202,20 @@ const AllOrders = () => {
     const to = formatDate(dates?.to as Date);
 
     const workBook = XLSX.utils.book_new();
-    //const workSheet = XLSX.utils.json_to_sheet(purifiedData);
-    const workSheet = XLSX.utils.json_to_sheet(
-      purifiedData.map((order) =>
-        Object.fromEntries(
-          Object.entries(order).map(([key, value]) => [
-            key,
-            { v: value, s: { alignment: { horizontal: "center" } } },
-          ]),
-        ),
-      ),
-    );
+    const workSheet = XLSX.utils.json_to_sheet(purifiedData);
+    const range = XLSX.utils.decode_range(workSheet["!ref"]!);
+
+    for (let R = 1; R <= range.e.r; ++R) {
+      for (let C = 0; C <= range.e.c; ++C) {
+        const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+
+        if (!workSheet[cellAddress]) continue;
+
+        workSheet[cellAddress].s = {
+          alignment: { horizontal: "center" },
+        };
+      }
+    }
 
     const headers = Object.keys(purifiedData[0]);
     const statusColIndex = headers.indexOf("status");
