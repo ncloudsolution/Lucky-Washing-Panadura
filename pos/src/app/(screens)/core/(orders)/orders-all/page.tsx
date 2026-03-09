@@ -161,8 +161,11 @@ const AllOrders = () => {
         minute: "2-digit",
       }); // HH:MM
 
+      const counterId = i.invoiceId.toString().slice(0, 2);
+      const invoiceIdOnly = i.invoiceId.toString().slice(2);
+
       return {
-        invoiceId: i.invoiceId,
+        invoiceId: `${counterId}-${invoiceIdOnly}`,
         branch: i.branch,
         status: i.status,
         saleValue: Number(i.saleValue),
@@ -171,7 +174,8 @@ const AllOrders = () => {
           Number(i.deliveryfee ?? 0) -
           Number(i.paymentAmount),
         deliveryfee: Number(i.deliveryfee),
-        createdAt: `${date} ${time}`,
+        date: date,
+        time: time,
       };
     });
 
