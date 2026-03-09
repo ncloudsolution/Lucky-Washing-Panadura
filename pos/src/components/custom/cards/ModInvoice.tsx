@@ -135,6 +135,10 @@ const ModInvoice = ({
   }, 0);
 
   const [date, time] = formatDate(data.baseData.createdAt);
+
+  const counterId = data.baseData.invoiceId.slice(0, 2);
+  const invoiceIdOnly = data.baseData.invoiceId.slice(2);
+
   return (
     <Card
       className={`z-10 flex flex-col border-superbase shadow-xl print:border-primary print:shadow-none print:rounded-none items-center print:px-2 ${
@@ -143,7 +147,7 @@ const ModInvoice = ({
     >
       <div className="flex flex-col gap-[2px] items-center mb-4">
         <CardTitle className="text-5xl leading-[40px]">
-          {data.baseData.invoiceId}
+          {counterId}-{invoiceIdOnly}
         </CardTitle>
         <span className="text-[10px]">{headings.INVOICE_NO}</span>
         {/* <CardDescription className="print:text-primary print:text-xs text-center">
