@@ -80,9 +80,9 @@ const AllOrders = () => {
   const [odStatus, setOdStatus] = useState("All");
   const { data: session } = useSession();
   const role = session?.user.role.toLowerCase();
-  const [query, setQuery] = useState(session?.user.counterNo ?? "01");
+  const [query, setQuery] = useState(session?.user.counterNo ?? "01-");
 
-  const debouncedQuery = useDebounce(query);
+  const debouncedQuery = useDebounce(query.replace(/-/g, ""));
   const disableDefaultFilters = debouncedQuery.length > 2;
 
   const {
@@ -582,6 +582,9 @@ export const OrderUI = ({
                     return x;
                   }
 
+                  const counterId = or.invoiceId.toString().slice(0, 2);
+                  const invoiceIdOnly = or.invoiceId.toString().slice(2);
+
                   return (
                     <div
                       key={index}
@@ -601,7 +604,8 @@ export const OrderUI = ({
                             )}
                           </div>
                         </>
-                        {or.invoiceId}
+                        {/* {or.invoiceId} */}
+                        {counterId}-{invoiceIdOnly}
                       </div>
                       <div className="flex-1 text-center">{or.branch}</div>
 
