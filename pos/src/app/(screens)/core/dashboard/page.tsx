@@ -368,8 +368,9 @@ const Dashboard = () => {
 
     // paymentMethod col in Income sheet = column C (index 2), amount = column B (index 1)
     // paymentMethod col in Expenses sheet = column D (index 3), amount = column C (index 2)
+
     const makeIncomeFormula = (method: string) =>
-      `SUMPRODUCT((Income!C${incomeDataStart}:C${incomeDataEnd}="${method}")*(Income!B${incomeDataStart}:B${incomeDataEnd})*SUBTOTAL(103,OFFSET(Income!C${incomeDataStart},ROW(Income!C${incomeDataStart}:C${incomeDataEnd})-ROW(Income!C${incomeDataStart}),0)))`;
+      `SUMPRODUCT(('Collected Revenue'!C${incomeDataStart}:C${incomeDataEnd}="${method}")*('Collected Revenue'!B${incomeDataStart}:B${incomeDataEnd})*SUBTOTAL(103,OFFSET('Collected Revenue'!C${incomeDataStart},ROW('Collected Revenue'!C${incomeDataStart}:C${incomeDataEnd})-ROW('Collected Revenue'!C${incomeDataStart}),0)))`;
 
     const makeExpenseFormula = (method: string) =>
       `SUMPRODUCT((Expenses!D${expDataStart}:D${expDataEnd}="${method}")*(Expenses!C${expDataStart}:C${expDataEnd})*SUBTOTAL(103,OFFSET(Expenses!D${expDataStart},ROW(Expenses!D${expDataStart}:D${expDataEnd})-ROW(Expenses!D${expDataStart}),0)))`;
@@ -400,7 +401,7 @@ const Dashboard = () => {
     // 1 gap row (row 2), dark header at row 3
     XLSX.utils.sheet_add_aoa(
       breakdownSheet,
-      [["Payment Method", "Income", "Expenses", "Net"]],
+      [["Payment Method", "Revenue Collected", "Expenses", "Net Cash Flow"]],
       { origin: "A3" },
     );
     ["A3", "B3", "C3", "D3"].forEach((addr) => {
@@ -588,7 +589,7 @@ const Dashboard = () => {
       },
     ];
 
-    XLSX.utils.book_append_sheet(workBook, incomeSheet, "Income");
+    XLSX.utils.book_append_sheet(workBook, incomeSheet, "Collected Revenue");
 
     // ─────────────────────────────────────────────
     // SHEET 3 — Expenses (with filter)
