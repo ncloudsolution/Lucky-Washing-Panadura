@@ -1,6 +1,8 @@
 import { Prisma } from "@prisma/client";
 
 import { BankDetailsCard } from "@/components/custom/cards/BankDetailsCard";
+import { IIncome } from "@/components/custom/forms/FormIncome";
+import { IExpense } from "@/components/custom/forms/FormExpense";
 
 //change done by sohan
 export const devMode = true;
@@ -496,4 +498,10 @@ export interface IPlan {
   id: string;
   monthlyPrice: Prisma.Decimal;
   yearlyDiscountPercentage: Prisma.Decimal;
+}
+
+export interface IAllData {
+  orderRecords: (IOrderMeta & { paymentAmount: number })[];
+  incomeRecords: IIncome[];
+  expenseRecords: IExpense[];
 }

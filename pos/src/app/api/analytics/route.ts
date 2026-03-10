@@ -19,7 +19,7 @@ export const GET = auth(async function GET(req: any) {
 
   const authRole = req.auth?.user?.role?.toLowerCase() as T_Role;
   const authBranch = req.auth?.user?.branch;
-
+  console.log(authRole);
   // const authRole = "director" as T_Role;
   // const authBranch = "Bentota";
 
