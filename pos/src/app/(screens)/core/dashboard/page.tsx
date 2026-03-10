@@ -319,16 +319,14 @@ const Dashboard = () => {
         hour: "2-digit",
         minute: "2-digit",
       });
-
       const counterId = i.invoiceId.toString().slice(0, 2);
       const invoiceIdOnly = i.invoiceId.toString().slice(2);
-
       return {
         invoiceId: `${counterId}-${invoiceIdOnly}`,
         branch: i.branch,
         status: i.status,
         saleValue: Number(i.saleValue),
-        outstanding:
+        receivables:
           Number(i.saleValue) +
           Number(i.deliveryfee ?? 0) -
           Number(i.paymentAmount),
@@ -348,27 +346,63 @@ const Dashboard = () => {
       Credit: { bg: "E34A2F", whiteText: true },
     };
 
+    const STATUS_STYLES: Record<string, { bg: string; whiteText: boolean }> = {
+      Delivered: { bg: "1A54DA", whiteText: true },
+      Packed: { bg: "2F8F5A", whiteText: false },
+      Processing: { bg: "F4C430", whiteText: false },
+      Shipped: { bg: "FFA500", whiteText: false },
+      Cancelled: { bg: "E34A2F", whiteText: true },
+      Returned: { bg: "D3D3D3", whiteText: false },
+    };
+
+    const SALEVALUE_STYLES: Record<string, { bg: string; whiteText: boolean }> =
+      {
+        true: { bg: "1A54DA", whiteText: true },
+        false: { bg: "E34A2F", whiteText: true },
+      };
+
+    const OUTSTANDING_STYLES: Record<
+      string,
+      { bg: string; whiteText: boolean }
+    > = {
+      true: { bg: "FFB3B3", whiteText: false },
+    };
+
     const formatDate = (date: Date) => date.toISOString().split("T")[0];
     const from = formatDate(dates?.from as Date);
     const to = formatDate(dates?.to as Date);
 
+    // Pre-calculate Orders column letters (needed in Breakdown sheet formulas)
+    const ordKeys = Object.keys(purifiedOrders[0]);
+    const ordHeaderRow = 2; // row index (0-based), Excel row 3
+    const ordDataStartExcel = ordHeaderRow + 2; // Excel row where data begins (1-indexed) = 4
+    const ordDataEndExcel = ordHeaderRow + purifiedOrders.length + 1;
+    const receivablesColLetter = XLSX.utils.encode_col(
+      ordKeys.indexOf("receivables"),
+    );
+    const invoiceColLetter = XLSX.utils.encode_col(
+      ordKeys.indexOf("invoiceId"),
+    );
+
     const workBook = XLSX.utils.book_new();
+
     // ─────────────────────────────────────────────
     // SHEET 1 — Breakdown
     // ─────────────────────────────────────────────
     const breakdownSheet: XLSX.WorkSheet = {};
 
-    // Income sheet: header at row index 3 (Excel row 4), data from Excel row 5
-    const incomeDataStart = 5;
+    // Income sheet: header at row index 2 (Excel row 3), data from Excel row 4
+    // incomeHeaderRow = 2 → data starts at incomeHeaderRow + 2 = Excel row 4...
+    // but we kept incomeHeaderRow=2 below which means Excel row 3 header, data row 4
+    const incomeDataStart = 4;
     const incomeDataEnd = incomeDataStart + purifiedIncome.length - 1;
 
-    // Expenses sheet: header at row index 3 (Excel row 4), data from Excel row 5
-    const expDataStart = 5;
+    // Expenses sheet: same structure
+    const expDataStart = 4;
     const expDataEnd = expDataStart + purifiedExpenses.length - 1;
 
-    // paymentMethod col in Income sheet = column C (index 2), amount = column B (index 1)
+    // paymentMethod col in Collected Revenue sheet = column C (index 2), amount = column B (index 1)
     // paymentMethod col in Expenses sheet = column D (index 3), amount = column C (index 2)
-
     const makeIncomeFormula = (method: string) =>
       `SUMPRODUCT(('Collected Revenue'!C${incomeDataStart}:C${incomeDataEnd}="${method}")*('Collected Revenue'!B${incomeDataStart}:B${incomeDataEnd})*SUBTOTAL(103,OFFSET('Collected Revenue'!C${incomeDataStart},ROW('Collected Revenue'!C${incomeDataStart}:C${incomeDataEnd})-ROW('Collected Revenue'!C${incomeDataStart}),0)))`;
 
@@ -377,13 +411,11 @@ const Dashboard = () => {
 
     const makeNetFormula = (row: number) => `B${row}-C${row}`;
 
-    // Purple title at A1
+    // Purple title at A1, merged across all 4 columns
     XLSX.utils.sheet_add_aoa(
       breakdownSheet,
       [["Collected Net Operating Cash Flow ( Rs )"]],
-      {
-        origin: "A1",
-      },
+      { origin: "A1" },
     );
     if (breakdownSheet["A1"]) {
       breakdownSheet["A1"].s = {
@@ -393,9 +425,8 @@ const Dashboard = () => {
       };
     }
 
-    // Merge A1 across all 4 columns (A1:D1)
     breakdownSheet["!merges"] = [
-      { s: { r: 0, c: 0 }, e: { r: 0, c: 1 } }, // A1:B1
+      { s: { r: 0, c: 0 }, e: { r: 0, c: 3 } }, // A1:D1
     ];
 
     // 1 gap row (row 2), dark header at row 3
@@ -466,6 +497,64 @@ const Dashboard = () => {
       }
     });
 
+    // Row 9 gap, Row 10 gap
+
+    // A11: Sales Count label | B11: filter-reactive COUNTA from Orders sheet
+    XLSX.utils.sheet_add_aoa(
+      breakdownSheet,
+      [
+        [
+          "Sales Count",
+          {
+            f: `SUBTOTAL(103,Orders!${invoiceColLetter}${ordDataStartExcel}:${invoiceColLetter}${ordDataEndExcel})`,
+          },
+        ],
+      ],
+      { origin: "A11" },
+    );
+    if (breakdownSheet["A11"]) {
+      breakdownSheet["A11"].s = {
+        fill: { patternType: "solid", fgColor: { rgb: "000000" } },
+        font: { bold: true, color: { rgb: "FFFFFF" } },
+        alignment: { horizontal: "center" },
+      };
+    }
+    if (breakdownSheet["B11"]) {
+      breakdownSheet["B11"].s = {
+        fill: { patternType: "solid", fgColor: { rgb: "000000" } },
+        font: { bold: true, color: { rgb: "FFFFFF" } },
+        alignment: { horizontal: "center" },
+      };
+    }
+
+    // A12: Receivables label | B12: filter-reactive SUM from Orders sheet
+    XLSX.utils.sheet_add_aoa(
+      breakdownSheet,
+      [
+        [
+          "Receivables",
+          {
+            f: `SUBTOTAL(109,Orders!${receivablesColLetter}${ordDataStartExcel}:${receivablesColLetter}${ordDataEndExcel})`,
+          },
+        ],
+      ],
+      { origin: "A12" },
+    );
+    if (breakdownSheet["A12"]) {
+      breakdownSheet["A12"].s = {
+        fill: { patternType: "solid", fgColor: { rgb: "E34A2F" } },
+        font: { bold: true, color: { rgb: "FFFFFF" } },
+        alignment: { horizontal: "center" },
+      };
+    }
+    if (breakdownSheet["B12"]) {
+      breakdownSheet["B12"].s = {
+        fill: { patternType: "solid", fgColor: { rgb: "E34A2F" } },
+        font: { bold: true, color: { rgb: "FFFFFF" } },
+        alignment: { horizontal: "center" },
+      };
+    }
+
     breakdownSheet["!cols"] = [
       { wch: 20 },
       { wch: 20 },
@@ -483,12 +572,12 @@ const Dashboard = () => {
     ];
 
     XLSX.utils.book_append_sheet(workBook, breakdownSheet, "Breakdown");
+
     // ─────────────────────────────────────────────
-    // SHEET 2 — Income (with filter)
+    // SHEET 2 — Collected Revenue (with filter)
     // ─────────────────────────────────────────────
     const incomeSheet: XLSX.WorkSheet = {};
 
-    // Title row (row 0 = A1)
     XLSX.utils.sheet_add_aoa(
       incomeSheet,
       [["Sales Revenue Collected ( Rs )"]],
@@ -502,12 +591,9 @@ const Dashboard = () => {
       };
     }
 
-    incomeSheet["!merges"] = [
-      { s: { r: 0, c: 0 }, e: { r: 0, c: 1 } }, // A1:B1
-    ];
+    incomeSheet["!merges"] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 2 } }];
 
-    // Data starts at row index 2 (row 3 in Excel — 1 gap row)
-    const incomeHeaderRow = 2;
+    const incomeHeaderRow = 2; // row index (0-based), Excel row 3
     XLSX.utils.sheet_add_json(incomeSheet, purifiedIncome, {
       origin: XLSX.utils.encode_cell({ r: incomeHeaderRow, c: 0 }),
       skipHeader: false,
@@ -515,7 +601,12 @@ const Dashboard = () => {
 
     const incomeHeaders = Object.keys(purifiedIncome[0]);
 
-    // Header style
+    // Fix merge now that we know incomeHeaders length
+    incomeSheet["!merges"] = [
+      { s: { r: 0, c: 0 }, e: { r: 0, c: incomeHeaders.length - 1 } },
+    ];
+
+    // Dark header style
     incomeHeaders.forEach((_, c) => {
       const cell = XLSX.utils.encode_cell({ r: incomeHeaderRow, c });
       if (incomeSheet[cell]) {
@@ -540,7 +631,7 @@ const Dashboard = () => {
       }
     }
 
-    // Payment method color
+    // Payment method colors
     const incomePayColIdx = incomeHeaders.indexOf("paymentMethod");
     if (incomePayColIdx !== -1) {
       const col = XLSX.utils.encode_col(incomePayColIdx);
@@ -596,7 +687,6 @@ const Dashboard = () => {
     // ─────────────────────────────────────────────
     const expensesSheet: XLSX.WorkSheet = {};
 
-    // Title row
     XLSX.utils.sheet_add_aoa(expensesSheet, [["Expenses ( Rs )"]], {
       origin: "A1",
     });
@@ -608,12 +698,7 @@ const Dashboard = () => {
       };
     }
 
-    expensesSheet["!merges"] = [
-      { s: { r: 0, c: 0 }, e: { r: 0, c: 1 } }, // A1:B1
-    ];
-
-    // Data starts at row index 2
-    const expHeaderRow = 2;
+    const expHeaderRow = 2; // row index (0-based), Excel row 3
     XLSX.utils.sheet_add_json(expensesSheet, purifiedExpenses, {
       origin: XLSX.utils.encode_cell({ r: expHeaderRow, c: 0 }),
       skipHeader: false,
@@ -621,7 +706,11 @@ const Dashboard = () => {
 
     const expHeaders = Object.keys(purifiedExpenses[0]);
 
-    // Header style
+    expensesSheet["!merges"] = [
+      { s: { r: 0, c: 0 }, e: { r: 0, c: expHeaders.length - 1 } },
+    ];
+
+    // Dark header style
     expHeaders.forEach((_, c) => {
       const cell = XLSX.utils.encode_cell({ r: expHeaderRow, c });
       if (expensesSheet[cell]) {
@@ -646,7 +735,7 @@ const Dashboard = () => {
       }
     }
 
-    // Payment method color
+    // Payment method colors
     const expPayColIdx = expHeaders.indexOf("paymentMethod");
     if (expPayColIdx !== -1) {
       const col = XLSX.utils.encode_col(expPayColIdx);
@@ -654,7 +743,7 @@ const Dashboard = () => {
         const cell = `${col}${expHeaderRow + rowIdx + 2}`;
         const style =
           PAYMENT_METHOD_STYLES[expense.paymentMethod as TPaymentMethod];
-        if (style && expensesSheet[cell]) {
+        if (expensesSheet[cell] && style) {
           expensesSheet[cell].s = {
             fill: { patternType: "solid", fgColor: { rgb: style.bg } },
             font: {
@@ -699,29 +788,6 @@ const Dashboard = () => {
     // ─────────────────────────────────────────────
     const ordersSheet: XLSX.WorkSheet = {};
 
-    const STATUS_STYLES: Record<string, { bg: string; whiteText: boolean }> = {
-      Delivered: { bg: "1A54DA", whiteText: true },
-      Packed: { bg: "2F8F5A", whiteText: false },
-      Processing: { bg: "F4C430", whiteText: false },
-      Shipped: { bg: "FFA500", whiteText: false },
-      Cancelled: { bg: "E34A2F", whiteText: true },
-      Returned: { bg: "D3D3D3", whiteText: false },
-    };
-
-    const SALEVALUE_STYLES: Record<string, { bg: string; whiteText: boolean }> =
-      {
-        true: { bg: "1A54DA", whiteText: true },
-        false: { bg: "E34A2F", whiteText: true },
-      };
-
-    const OUTSTANDING_STYLES: Record<
-      string,
-      { bg: string; whiteText: boolean }
-    > = {
-      true: { bg: "FFB3B3", whiteText: false },
-    };
-
-    // ── Row 0 (A1): Purple title ──
     XLSX.utils.sheet_add_aoa(ordersSheet, [["Orders"]], { origin: "A1" });
     if (ordersSheet["A1"]) {
       ordersSheet["A1"].s = {
@@ -731,20 +797,19 @@ const Dashboard = () => {
       };
     }
 
-    ordersSheet["!merges"] = [
-      { s: { r: 0, c: 0 }, e: { r: 0, c: 1 } }, // A1:B1
-    ];
-
-    // ── Row 2 (index 2): dark header + data below ──
-    const ordHeaderRow = 2;
+    // ordHeaderRow = 2 already defined above
     XLSX.utils.sheet_add_json(ordersSheet, purifiedOrders, {
       origin: XLSX.utils.encode_cell({ r: ordHeaderRow, c: 0 }),
       skipHeader: false,
     });
 
-    const ordHeaders = Object.keys(purifiedOrders[0]);
+    const ordHeaders = ordKeys; // already defined above
 
-    // Dark header row style
+    ordersSheet["!merges"] = [
+      { s: { r: 0, c: 0 }, e: { r: 0, c: ordHeaders.length - 1 } },
+    ];
+
+    // Dark header style
     ordHeaders.forEach((_, c) => {
       const cell = XLSX.utils.encode_cell({ r: ordHeaderRow, c });
       if (ordersSheet[cell]) {
@@ -789,13 +854,13 @@ const Dashboard = () => {
       });
     }
 
-    // SaleValue column colors (blue = fully paid, red = has outstanding)
+    // SaleValue column colors (blue = fully paid, red = has receivables)
     const saleValueColIdx = ordHeaders.indexOf("saleValue");
     if (saleValueColIdx !== -1) {
       const col = XLSX.utils.encode_col(saleValueColIdx);
       purifiedOrders.forEach((order, rowIdx) => {
         const cell = `${col}${ordHeaderRow + rowIdx + 2}`;
-        const style = SALEVALUE_STYLES[String(order.outstanding === 0)];
+        const style = SALEVALUE_STYLES[String(order.receivables === 0)];
         if (style && ordersSheet[cell]) {
           ordersSheet[cell].s = {
             fill: { patternType: "solid", fgColor: { rgb: style.bg } },
@@ -809,14 +874,14 @@ const Dashboard = () => {
       });
     }
 
-    // Outstanding column colors (pink if > 0)
-    const outstandingIdx = ordHeaders.indexOf("outstanding");
-    if (outstandingIdx !== -1) {
-      const col = XLSX.utils.encode_col(outstandingIdx);
+    // Receivables column colors (pink if > 0)
+    const receivablesIdx = ordHeaders.indexOf("receivables");
+    if (receivablesIdx !== -1) {
+      const col = XLSX.utils.encode_col(receivablesIdx);
       purifiedOrders.forEach((order, rowIdx) => {
-        if (order.outstanding <= 0) return;
+        if (order.receivables <= 0) return;
         const cell = `${col}${ordHeaderRow + rowIdx + 2}`;
-        const style = OUTSTANDING_STYLES[String(order.outstanding > 0)];
+        const style = OUTSTANDING_STYLES[String(order.receivables > 0)];
         if (style && ordersSheet[cell]) {
           ordersSheet[cell].s = {
             fill: { patternType: "solid", fgColor: { rgb: style.bg } },
@@ -837,7 +902,6 @@ const Dashboard = () => {
       r: ordHeaderRow + purifiedOrders.length,
       c: ordHeaders.length - 1,
     });
-
     ordersSheet["!autofilter"] = { ref: `${ordHeaderRef}:${ordEndRef}` };
     ordersSheet["!tables"] = [
       {
