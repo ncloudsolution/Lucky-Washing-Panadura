@@ -1,12 +1,15 @@
 "use client";
 import NoRecordsCard from "@/components/custom/cards/NoRecordsCard";
 import { ChartPieLabel } from "@/components/custom/charts/ChartPieLabel";
+import { ExportDialog } from "@/components/custom/dialogs/ExportDialog";
 import { DatePickerWithRange } from "@/components/custom/inputs/DatePickerWithRange";
 import { SelectOnSearch } from "@/components/custom/inputs/SelectOnSearch";
 import TextSkeleton from "@/components/custom/skeleton/TextSkeleton";
+import { TipWrapper } from "@/components/custom/wrapper/TipWrapper";
 import { Card } from "@/components/ui/card";
 import {
   ENUMPaymentMethodArray,
+  IAllData,
   IAnalytics,
   PaymentMethod,
   TPaymentMethod,
@@ -20,13 +23,17 @@ import {
   getProductVariantFullNameByVarientId,
 } from "@/utils/common";
 import { useQuery } from "@tanstack/react-query";
-import { Building2, Calendar } from "lucide-react";
+import { format } from "date-fns";
+import { Building2, Calendar, Check, LoaderCircle } from "lucide-react";
 import { useSession } from "next-auth/react";
+import { setSourceMapsEnabled } from "process";
 import React, { useEffect, useState } from "react";
 import { DateRange } from "react-day-picker";
+import { toast } from "sonner";
+import * as XLSX from "xlsx-js-style";
 
 const Dashboard = () => {
-  const [date, setDate] = React.useState<DateRange | undefined>({
+  const [dates, setDates] = React.useState<DateRange | undefined>({
     //  from: new Date(new Date().getFullYear(), 0, 1),
     from: new Date(),
     to: new Date(),
@@ -36,6 +43,7 @@ const Dashboard = () => {
 
   // const [timeFrame, setTimeFrame] = useState("All Time");
   const [branch, setBranch] = useState("All Branches");
+  const [open, setOpen] = useState(false);
 
   useEffect(() => {
     if (
@@ -80,13 +88,13 @@ const Dashboard = () => {
     isLoading: isLoadingAnalytics,
     error,
   } = useQuery({
-    queryKey: ["analytics", date],
+    queryKey: ["analytics", dates],
     queryFn: async () => {
       // const query = timeFrame.toLocaleLowerCase().split(" ").join("");
 
       const response = await BasicDataFetch({
         method: "GET",
-        endpoint: `/api/analytics?from=${date?.from}&to=${date?.to}`,
+        endpoint: `/api/analytics?from=${dates?.from}&to=${dates?.to}`,
       });
       // Return only the data array - this is what gets cached
       return response?.data as IAnalytics;
@@ -94,6 +102,20 @@ const Dashboard = () => {
 
     staleTime: 0, // 👈 data becomes stale immediately
     refetchOnMount: "always", // 👈 ALWAYS fetch when route is entered
+  });
+
+  const { data: allData, isLoading: isLoadingAllData } = useQuery({
+    queryKey: ["all-data", dates],
+    queryFn: async () => {
+      const response = await BasicDataFetch({
+        method: "GET",
+        endpoint: `/api/analytics/export?from=${dates?.from}&to=${dates?.to}&branch=${branch}`,
+      });
+      // Return only the data array - this is what gets cached
+      return response?.data as IAllData;
+    },
+    // enabled:open,
+    staleTime: 1000 * 60 * 5,
   });
 
   function getTotalValue(type: "count" | "saleValue"): number {
@@ -239,7 +261,608 @@ const Dashboard = () => {
   //           ? "var(--color-destructive)"
   //           : `var(--chart-${index + 1})`,
   //     })) ?? [];
+  const handleExport = () => {
+    if (isLoadingAllData) {
+      return toast.error("Please wait a moment. Data is still Loading");
+    }
 
+    if (!allData) {
+      return toast.error("No data to export");
+    }
+
+    if (
+      allData?.expenseRecords.length === 0 ||
+      allData?.incomeRecords.length === 0 ||
+      allData?.orderRecords.length === 0
+    ) {
+      return toast.error("No data to export");
+    }
+
+    const purifiedExpenses = allData.expenseRecords.map((i) => {
+      const dateObj = new Date(i.createdAt);
+      const date = dateObj.toLocaleDateString("en-CA");
+      const time = dateObj.toLocaleTimeString("en-GB", {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+      return {
+        branch: i.branch,
+        category: i.category,
+        amount: Number(i.amount),
+        paymentMethod: i.paymentMethod,
+        remarks: i.remarks,
+        date: date,
+        time: time,
+      };
+    });
+
+    const purifiedIncome = allData.incomeRecords.map((i) => {
+      const dateObj = new Date(i.createdAt);
+      const date = dateObj.toLocaleDateString("en-CA");
+      const time = dateObj.toLocaleTimeString("en-GB", {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+      return {
+        category: i.category,
+        amount: Number(i.amount),
+        paymentMethod: i.paymentMethod,
+        date: date,
+        time: time,
+      };
+    });
+
+    const purifiedOrders = allData.orderRecords.map((i) => {
+      const dateObj = new Date(i.createdAt);
+      const date = dateObj.toLocaleDateString("en-CA");
+      const time = dateObj.toLocaleTimeString("en-GB", {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+
+      const counterId = i.invoiceId.toString().slice(0, 2);
+      const invoiceIdOnly = i.invoiceId.toString().slice(2);
+
+      return {
+        invoiceId: `${counterId}-${invoiceIdOnly}`,
+        branch: i.branch,
+        status: i.status,
+        saleValue: Number(i.saleValue),
+        outstanding:
+          Number(i.saleValue) +
+          Number(i.deliveryfee ?? 0) -
+          Number(i.paymentAmount),
+        deliveryfee: Number(i.deliveryfee),
+        date: date,
+        time: time,
+      };
+    });
+
+    const PAYMENT_METHOD_STYLES: Record<
+      string,
+      { bg: string; whiteText: boolean }
+    > = {
+      Cash: { bg: "1A54DA", whiteText: true },
+      Card: { bg: "104E64", whiteText: true },
+      Bank: { bg: "F4C430", whiteText: false },
+      Credit: { bg: "E34A2F", whiteText: true },
+    };
+
+    const formatDate = (date: Date) => date.toISOString().split("T")[0];
+    const from = formatDate(dates?.from as Date);
+    const to = formatDate(dates?.to as Date);
+
+    const workBook = XLSX.utils.book_new();
+    // ─────────────────────────────────────────────
+    // SHEET 1 — Breakdown
+    // ─────────────────────────────────────────────
+    const breakdownSheet: XLSX.WorkSheet = {};
+
+    // Income sheet: header at row index 3 (Excel row 4), data from Excel row 5
+    const incomeDataStart = 5;
+    const incomeDataEnd = incomeDataStart + purifiedIncome.length - 1;
+
+    // Expenses sheet: header at row index 3 (Excel row 4), data from Excel row 5
+    const expDataStart = 5;
+    const expDataEnd = expDataStart + purifiedExpenses.length - 1;
+
+    // paymentMethod col in Income sheet = column C (index 2), amount = column B (index 1)
+    // paymentMethod col in Expenses sheet = column D (index 3), amount = column C (index 2)
+    const makeIncomeFormula = (method: string) =>
+      `SUMPRODUCT((Income!C${incomeDataStart}:C${incomeDataEnd}="${method}")*(Income!B${incomeDataStart}:B${incomeDataEnd})*SUBTOTAL(103,OFFSET(Income!C${incomeDataStart},ROW(Income!C${incomeDataStart}:C${incomeDataEnd})-ROW(Income!C${incomeDataStart}),0)))`;
+
+    const makeExpenseFormula = (method: string) =>
+      `SUMPRODUCT((Expenses!D${expDataStart}:D${expDataEnd}="${method}")*(Expenses!C${expDataStart}:C${expDataEnd})*SUBTOTAL(103,OFFSET(Expenses!D${expDataStart},ROW(Expenses!D${expDataStart}:D${expDataEnd})-ROW(Expenses!D${expDataStart}),0)))`;
+
+    const makeNetFormula = (row: number) => `B${row}-C${row}`;
+
+    // Purple title at A1
+    XLSX.utils.sheet_add_aoa(
+      breakdownSheet,
+      [["Collected Net Operating Cash Flow ( Rs )"]],
+      {
+        origin: "A1",
+      },
+    );
+    if (breakdownSheet["A1"]) {
+      breakdownSheet["A1"].s = {
+        fill: { patternType: "solid", fgColor: { rgb: "7030A0" } },
+        font: { bold: true, color: { rgb: "FFFFFF" } },
+        alignment: { horizontal: "center" },
+      };
+    }
+
+    // Merge A1 across all 4 columns (A1:D1)
+    breakdownSheet["!merges"] = [
+      { s: { r: 0, c: 0 }, e: { r: 0, c: 1 } }, // A1:B1
+    ];
+
+    // 1 gap row (row 2), dark header at row 3
+    XLSX.utils.sheet_add_aoa(
+      breakdownSheet,
+      [["Payment Method", "Income", "Expenses", "Net"]],
+      { origin: "A3" },
+    );
+    ["A3", "B3", "C3", "D3"].forEach((addr) => {
+      if (breakdownSheet[addr]) {
+        breakdownSheet[addr].s = {
+          fill: { patternType: "solid", fgColor: { rgb: "1E1E2D" } },
+          font: { bold: true, color: { rgb: "FFFFFF" } },
+          alignment: { horizontal: "center" },
+        };
+      }
+    });
+
+    // Data rows: Cash/Card/Bank/Credit at Excel rows 4–7, TOTAL at row 8
+    const methods = ["Cash", "Card", "Bank", "Credit"];
+    const dataRows = [
+      ...methods.map((method, i) => {
+        const excelRow = i + 4;
+        return [
+          method,
+          { f: makeIncomeFormula(method) },
+          { f: makeExpenseFormula(method) },
+          { f: makeNetFormula(excelRow) },
+        ];
+      }),
+      ["TOTAL", { f: "SUM(B4:B7)" }, { f: "SUM(C4:C7)" }, { f: "SUM(D4:D7)" }],
+    ];
+
+    XLSX.utils.sheet_add_aoa(breakdownSheet, dataRows, { origin: "A4" });
+
+    // Payment method label colors (rows 4–7)
+    methods.forEach((method, i) => {
+      const excelRow = i + 4;
+      const style = PAYMENT_METHOD_STYLES[method];
+
+      const labelCell = `A${excelRow}`;
+      if (style && breakdownSheet[labelCell]) {
+        breakdownSheet[labelCell].s = {
+          fill: { patternType: "solid", fgColor: { rgb: style.bg } },
+          font: {
+            bold: true,
+            ...(style.whiteText && { color: { rgb: "FFFFFF" } }),
+          },
+          alignment: { horizontal: "center" },
+        };
+      }
+
+      [`B${excelRow}`, `C${excelRow}`, `D${excelRow}`].forEach((addr) => {
+        if (breakdownSheet[addr]) {
+          breakdownSheet[addr].s = { alignment: { horizontal: "center" } };
+        }
+      });
+    });
+
+    // TOTAL row style (row 8)
+    ["A8", "B8", "C8", "D8"].forEach((addr) => {
+      if (breakdownSheet[addr]) {
+        breakdownSheet[addr].s = {
+          fill: { patternType: "solid", fgColor: { rgb: "e3dddc" } },
+          font: { bold: true, color: { rgb: "000000" } },
+          alignment: { horizontal: "center" },
+        };
+      }
+    });
+
+    breakdownSheet["!cols"] = [
+      { wch: 20 },
+      { wch: 20 },
+      { wch: 20 },
+      { wch: 20 },
+    ];
+    breakdownSheet["!tables"] = [
+      {
+        ref: "A3:D8",
+        name: "BreakdownTable",
+        displayName: "BreakdownTable",
+        headerRowCount: 1,
+        tableStyleInfo: { name: "TableStyleMedium2", showRowStripes: true },
+      },
+    ];
+
+    XLSX.utils.book_append_sheet(workBook, breakdownSheet, "Breakdown");
+    // ─────────────────────────────────────────────
+    // SHEET 2 — Income (with filter)
+    // ─────────────────────────────────────────────
+    const incomeSheet: XLSX.WorkSheet = {};
+
+    // Title row (row 0 = A1)
+    XLSX.utils.sheet_add_aoa(
+      incomeSheet,
+      [["Sales Revenue Collected ( Rs )"]],
+      { origin: "A1" },
+    );
+    if (incomeSheet["A1"]) {
+      incomeSheet["A1"].s = {
+        fill: { patternType: "solid", fgColor: { rgb: "7030A0" } },
+        font: { bold: true, color: { rgb: "FFFFFF" } },
+        alignment: { horizontal: "center" },
+      };
+    }
+
+    incomeSheet["!merges"] = [
+      { s: { r: 0, c: 0 }, e: { r: 0, c: 1 } }, // A1:B1
+    ];
+
+    // Data starts at row index 2 (row 3 in Excel — 1 gap row)
+    const incomeHeaderRow = 2;
+    XLSX.utils.sheet_add_json(incomeSheet, purifiedIncome, {
+      origin: XLSX.utils.encode_cell({ r: incomeHeaderRow, c: 0 }),
+      skipHeader: false,
+    });
+
+    const incomeHeaders = Object.keys(purifiedIncome[0]);
+
+    // Header style
+    incomeHeaders.forEach((_, c) => {
+      const cell = XLSX.utils.encode_cell({ r: incomeHeaderRow, c });
+      if (incomeSheet[cell]) {
+        incomeSheet[cell].s = {
+          fill: { patternType: "solid", fgColor: { rgb: "1E1E2D" } },
+          font: { bold: true, color: { rgb: "FFFFFF" } },
+          alignment: { horizontal: "center" },
+        };
+      }
+    });
+
+    // Data row styles
+    for (
+      let R = incomeHeaderRow + 1;
+      R <= incomeHeaderRow + purifiedIncome.length;
+      R++
+    ) {
+      for (let C = 0; C < incomeHeaders.length; C++) {
+        const cell = XLSX.utils.encode_cell({ r: R, c: C });
+        if (!incomeSheet[cell]) continue;
+        incomeSheet[cell].s = { alignment: { horizontal: "center" } };
+      }
+    }
+
+    // Payment method color
+    const incomePayColIdx = incomeHeaders.indexOf("paymentMethod");
+    if (incomePayColIdx !== -1) {
+      const col = XLSX.utils.encode_col(incomePayColIdx);
+      purifiedIncome.forEach((income, rowIdx) => {
+        const cell = `${col}${incomeHeaderRow + rowIdx + 2}`;
+        const style =
+          PAYMENT_METHOD_STYLES[income.paymentMethod as TPaymentMethod];
+        if (style && incomeSheet[cell]) {
+          incomeSheet[cell].s = {
+            fill: { patternType: "solid", fgColor: { rgb: style.bg } },
+            font: {
+              bold: true,
+              ...(style.whiteText && { color: { rgb: "FFFFFF" } }),
+            },
+            alignment: { horizontal: "center" },
+          };
+        }
+      });
+    }
+
+    incomeSheet["!cols"] = incomeHeaders.map(() => ({ wch: 20 }));
+
+    const incomeHeaderRef = XLSX.utils.encode_cell({
+      r: incomeHeaderRow,
+      c: 0,
+    });
+    const incomeEndRef = XLSX.utils.encode_cell({
+      r: incomeHeaderRow + purifiedIncome.length,
+      c: incomeHeaders.length - 1,
+    });
+    incomeSheet["!autofilter"] = { ref: `${incomeHeaderRef}:${incomeEndRef}` };
+    incomeSheet["!tables"] = [
+      {
+        ref: `${incomeHeaderRef}:${incomeEndRef}`,
+        name: "IncomeTable",
+        displayName: "IncomeTable",
+        headerRowCount: 1,
+        totalsRowCount: 0,
+        tableStyleInfo: {
+          name: "TableStyleMedium2",
+          showFirstColumn: false,
+          showLastColumn: false,
+          showRowStripes: true,
+          showColumnStripes: false,
+        },
+      },
+    ];
+
+    XLSX.utils.book_append_sheet(workBook, incomeSheet, "Income");
+
+    // ─────────────────────────────────────────────
+    // SHEET 3 — Expenses (with filter)
+    // ─────────────────────────────────────────────
+    const expensesSheet: XLSX.WorkSheet = {};
+
+    // Title row
+    XLSX.utils.sheet_add_aoa(expensesSheet, [["Expenses ( Rs )"]], {
+      origin: "A1",
+    });
+    if (expensesSheet["A1"]) {
+      expensesSheet["A1"].s = {
+        fill: { patternType: "solid", fgColor: { rgb: "7030A0" } },
+        font: { bold: true, color: { rgb: "FFFFFF" } },
+        alignment: { horizontal: "center" },
+      };
+    }
+
+    expensesSheet["!merges"] = [
+      { s: { r: 0, c: 0 }, e: { r: 0, c: 1 } }, // A1:B1
+    ];
+
+    // Data starts at row index 2
+    const expHeaderRow = 2;
+    XLSX.utils.sheet_add_json(expensesSheet, purifiedExpenses, {
+      origin: XLSX.utils.encode_cell({ r: expHeaderRow, c: 0 }),
+      skipHeader: false,
+    });
+
+    const expHeaders = Object.keys(purifiedExpenses[0]);
+
+    // Header style
+    expHeaders.forEach((_, c) => {
+      const cell = XLSX.utils.encode_cell({ r: expHeaderRow, c });
+      if (expensesSheet[cell]) {
+        expensesSheet[cell].s = {
+          fill: { patternType: "solid", fgColor: { rgb: "1E1E2D" } },
+          font: { bold: true, color: { rgb: "FFFFFF" } },
+          alignment: { horizontal: "center" },
+        };
+      }
+    });
+
+    // Data row styles
+    for (
+      let R = expHeaderRow + 1;
+      R <= expHeaderRow + purifiedExpenses.length;
+      R++
+    ) {
+      for (let C = 0; C < expHeaders.length; C++) {
+        const cell = XLSX.utils.encode_cell({ r: R, c: C });
+        if (!expensesSheet[cell]) continue;
+        expensesSheet[cell].s = { alignment: { horizontal: "center" } };
+      }
+    }
+
+    // Payment method color
+    const expPayColIdx = expHeaders.indexOf("paymentMethod");
+    if (expPayColIdx !== -1) {
+      const col = XLSX.utils.encode_col(expPayColIdx);
+      purifiedExpenses.forEach((expense, rowIdx) => {
+        const cell = `${col}${expHeaderRow + rowIdx + 2}`;
+        const style =
+          PAYMENT_METHOD_STYLES[expense.paymentMethod as TPaymentMethod];
+        if (style && expensesSheet[cell]) {
+          expensesSheet[cell].s = {
+            fill: { patternType: "solid", fgColor: { rgb: style.bg } },
+            font: {
+              bold: true,
+              ...(style.whiteText && { color: { rgb: "FFFFFF" } }),
+            },
+            alignment: { horizontal: "center" },
+          };
+        }
+      });
+    }
+
+    expensesSheet["!cols"] = expHeaders.map(() => ({ wch: 20 }));
+
+    const expHeaderRef = XLSX.utils.encode_cell({ r: expHeaderRow, c: 0 });
+    const expEndRef = XLSX.utils.encode_cell({
+      r: expHeaderRow + purifiedExpenses.length,
+      c: expHeaders.length - 1,
+    });
+    expensesSheet["!autofilter"] = { ref: `${expHeaderRef}:${expEndRef}` };
+    expensesSheet["!tables"] = [
+      {
+        ref: `${expHeaderRef}:${expEndRef}`,
+        name: "ExpensesTable",
+        displayName: "ExpensesTable",
+        headerRowCount: 1,
+        totalsRowCount: 0,
+        tableStyleInfo: {
+          name: "TableStyleMedium2",
+          showFirstColumn: false,
+          showLastColumn: false,
+          showRowStripes: true,
+          showColumnStripes: false,
+        },
+      },
+    ];
+
+    XLSX.utils.book_append_sheet(workBook, expensesSheet, "Expenses");
+
+    // ─────────────────────────────────────────────
+    // SHEET 4 — Orders (with filter)
+    // ─────────────────────────────────────────────
+    const ordersSheet: XLSX.WorkSheet = {};
+
+    const STATUS_STYLES: Record<string, { bg: string; whiteText: boolean }> = {
+      Delivered: { bg: "1A54DA", whiteText: true },
+      Packed: { bg: "2F8F5A", whiteText: false },
+      Processing: { bg: "F4C430", whiteText: false },
+      Shipped: { bg: "FFA500", whiteText: false },
+      Cancelled: { bg: "E34A2F", whiteText: true },
+      Returned: { bg: "D3D3D3", whiteText: false },
+    };
+
+    const SALEVALUE_STYLES: Record<string, { bg: string; whiteText: boolean }> =
+      {
+        true: { bg: "1A54DA", whiteText: true },
+        false: { bg: "E34A2F", whiteText: true },
+      };
+
+    const OUTSTANDING_STYLES: Record<
+      string,
+      { bg: string; whiteText: boolean }
+    > = {
+      true: { bg: "FFB3B3", whiteText: false },
+    };
+
+    // ── Row 0 (A1): Purple title ──
+    XLSX.utils.sheet_add_aoa(ordersSheet, [["Orders"]], { origin: "A1" });
+    if (ordersSheet["A1"]) {
+      ordersSheet["A1"].s = {
+        fill: { patternType: "solid", fgColor: { rgb: "7030A0" } },
+        font: { bold: true, color: { rgb: "FFFFFF" } },
+        alignment: { horizontal: "center" },
+      };
+    }
+
+    ordersSheet["!merges"] = [
+      { s: { r: 0, c: 0 }, e: { r: 0, c: 1 } }, // A1:B1
+    ];
+
+    // ── Row 2 (index 2): dark header + data below ──
+    const ordHeaderRow = 2;
+    XLSX.utils.sheet_add_json(ordersSheet, purifiedOrders, {
+      origin: XLSX.utils.encode_cell({ r: ordHeaderRow, c: 0 }),
+      skipHeader: false,
+    });
+
+    const ordHeaders = Object.keys(purifiedOrders[0]);
+
+    // Dark header row style
+    ordHeaders.forEach((_, c) => {
+      const cell = XLSX.utils.encode_cell({ r: ordHeaderRow, c });
+      if (ordersSheet[cell]) {
+        ordersSheet[cell].s = {
+          fill: { patternType: "solid", fgColor: { rgb: "1E1E2D" } },
+          font: { bold: true, color: { rgb: "FFFFFF" } },
+          alignment: { horizontal: "center" },
+        };
+      }
+    });
+
+    // Center-align all data rows
+    for (
+      let R = ordHeaderRow + 1;
+      R <= ordHeaderRow + purifiedOrders.length;
+      R++
+    ) {
+      for (let C = 0; C < ordHeaders.length; C++) {
+        const cell = XLSX.utils.encode_cell({ r: R, c: C });
+        if (!ordersSheet[cell]) continue;
+        ordersSheet[cell].s = { alignment: { horizontal: "center" } };
+      }
+    }
+
+    // Status column colors
+    const statusColIndex = ordHeaders.indexOf("status");
+    if (statusColIndex !== -1) {
+      const col = XLSX.utils.encode_col(statusColIndex);
+      purifiedOrders.forEach((order, rowIdx) => {
+        const cell = `${col}${ordHeaderRow + rowIdx + 2}`;
+        const style = STATUS_STYLES[order.status as string];
+        if (style && ordersSheet[cell]) {
+          ordersSheet[cell].s = {
+            fill: { patternType: "solid", fgColor: { rgb: style.bg } },
+            font: {
+              bold: true,
+              ...(style.whiteText && { color: { rgb: "FFFFFF" } }),
+            },
+            alignment: { horizontal: "center" },
+          };
+        }
+      });
+    }
+
+    // SaleValue column colors (blue = fully paid, red = has outstanding)
+    const saleValueColIdx = ordHeaders.indexOf("saleValue");
+    if (saleValueColIdx !== -1) {
+      const col = XLSX.utils.encode_col(saleValueColIdx);
+      purifiedOrders.forEach((order, rowIdx) => {
+        const cell = `${col}${ordHeaderRow + rowIdx + 2}`;
+        const style = SALEVALUE_STYLES[String(order.outstanding === 0)];
+        if (style && ordersSheet[cell]) {
+          ordersSheet[cell].s = {
+            fill: { patternType: "solid", fgColor: { rgb: style.bg } },
+            font: {
+              bold: true,
+              ...(style.whiteText && { color: { rgb: "FFFFFF" } }),
+            },
+            alignment: { horizontal: "center" },
+          };
+        }
+      });
+    }
+
+    // Outstanding column colors (pink if > 0)
+    const outstandingIdx = ordHeaders.indexOf("outstanding");
+    if (outstandingIdx !== -1) {
+      const col = XLSX.utils.encode_col(outstandingIdx);
+      purifiedOrders.forEach((order, rowIdx) => {
+        if (order.outstanding <= 0) return;
+        const cell = `${col}${ordHeaderRow + rowIdx + 2}`;
+        const style = OUTSTANDING_STYLES[String(order.outstanding > 0)];
+        if (style && ordersSheet[cell]) {
+          ordersSheet[cell].s = {
+            fill: { patternType: "solid", fgColor: { rgb: style.bg } },
+            font: {
+              bold: true,
+              ...(style.whiteText && { color: { rgb: "FFFFFF" } }),
+            },
+            alignment: { horizontal: "center" },
+          };
+        }
+      });
+    }
+
+    ordersSheet["!cols"] = ordHeaders.map(() => ({ wch: 20 }));
+
+    const ordHeaderRef = XLSX.utils.encode_cell({ r: ordHeaderRow, c: 0 });
+    const ordEndRef = XLSX.utils.encode_cell({
+      r: ordHeaderRow + purifiedOrders.length,
+      c: ordHeaders.length - 1,
+    });
+
+    ordersSheet["!autofilter"] = { ref: `${ordHeaderRef}:${ordEndRef}` };
+    ordersSheet["!tables"] = [
+      {
+        ref: `${ordHeaderRef}:${ordEndRef}`,
+        name: "OrdersTable",
+        displayName: "OrdersTable",
+        headerRowCount: 1,
+        totalsRowCount: 0,
+        tableStyleInfo: {
+          name: "TableStyleMedium2",
+          showFirstColumn: false,
+          showLastColumn: false,
+          showRowStripes: true,
+          showColumnStripes: false,
+        },
+      },
+    ];
+
+    XLSX.utils.book_append_sheet(workBook, ordersSheet, "Orders");
+
+    // ─────────────────────────────────────────────
+    // Export
+    // ─────────────────────────────────────────────
+    XLSX.writeFile(workBook, `Summary---${from}---${to}.xlsx`);
+    toast.success("Data exported successfully");
+  };
   return (
     // border-2 border-red-700
     <div className="flex flex-col gap-5">
@@ -247,7 +870,9 @@ const Dashboard = () => {
         <div className="flex flex-col gap-5">
           <div className="flex gap-5">
             <SelectOnSearch
-              isLoading={isLoadingAnalytics || isLoadingProducts}
+              isLoading={
+                isLoadingAnalytics || isLoadingProducts || isLoadingAllData
+              }
               icon={<Building2 className="text-white" size={18} />}
               selections={allBranches}
               value={branch}
@@ -273,11 +898,72 @@ const Dashboard = () => {
               }}
             /> */}
             <DatePickerWithRange
-              date={date}
-              setDate={setDate}
-              isLoading={isLoadingAnalytics || isLoadingProducts}
+              date={dates}
+              setDate={setDates}
+              isLoading={
+                isLoadingAnalytics || isLoadingProducts || isLoadingAllData
+              }
               label={false}
             />
+
+            <TipWrapper triggerText="Export as Excel">
+              <ExportDialog
+                open={open}
+                setOpen={setOpen}
+                noofRecords={1}
+                title="Export the Dashbaord Data"
+                description={`Records ready to export as selected filtered`}
+                loading={
+                  isLoadingAnalytics || isLoadingProducts || isLoadingAllData
+                }
+                handleExport={handleExport}
+                content={
+                  <div className="flex flex-col gap-2 py-3">
+                    <div className="flex flex-col gap-1">
+                      <div className="flex w-full justify-between">
+                        <div className="font-semibold">Date Range</div>
+                        <div className="text-muted-foreground">
+                          {dates?.from ? format(dates.from, "LLL dd, y") : ""} -{" "}
+                          {dates?.to ? format(dates.to, "LLL dd, y") : ""}
+                        </div>
+                      </div>
+                      <div className="flex w-full justify-between">
+                        <div className="font-semibold">Branch</div>
+                        <div className="text-muted-foreground">{branch}</div>
+                      </div>
+                      {/*  <div className="flex w-full justify-between">
+                        <div className="font-semibold">Payment Mode</div>
+                        <div className="text-muted-foreground">
+                          {paymentmode}
+                        </div>
+                      </div> */}
+                    </div>
+
+                    {/* <div className="flex w-full justify-between text-green-700">
+                      <div className="font-semibold">No of Records</div>
+                      <div>{filteredExpenses.length}</div>
+                    </div> */}
+
+                    <div className="text-muted-foreground text-sm">
+                      If your selected filters won’t meet your export needs,
+                      please cancel, adjust the filters on the Orders main
+                      screen, and try exporting again
+                    </div>
+
+                    {/* {isLoadingAllData ? (
+                      <div className="flex items-center gap-3 text-destructive">
+                        <div>Please Wait. Data loading...</div>
+                        <LoaderCircle className="animate-spin" />
+                      </div>
+                    ) : (
+                      <div className="flex gap-3 items-center text-green-700">
+                        Ready to Export <Check />
+                      </div>
+                    )} */}
+                  </div>
+                }
+              />
+            </TipWrapper>
           </div>
 
           <div className="flex gap-5 w-full">
@@ -533,8 +1219,8 @@ const Dashboard = () => {
         </div>
         <ChartPieLabel
           title="Payment Methods"
-          description={`${date?.from?.toLocaleDateString() ?? ""} ${
-            date?.to ? `- ${date.to.toLocaleDateString()}` : ""
+          description={`${dates?.from?.toLocaleDateString() ?? ""} ${
+            dates?.to ? `- ${dates.to.toLocaleDateString()}` : ""
           }`}
           chartData={getChartData()}
           isLoading={isLoadingAnalytics}

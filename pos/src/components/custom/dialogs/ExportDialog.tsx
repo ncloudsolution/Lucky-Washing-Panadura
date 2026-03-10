@@ -11,7 +11,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Sheet } from "lucide-react";
-import { useState } from "react";
 import { toast } from "sonner";
 
 export function ExportDialog({
@@ -21,6 +20,8 @@ export function ExportDialog({
   loading,
   handleExport,
   noofRecords,
+  open = false,
+  setOpen,
 }: {
   title: string;
   description: string;
@@ -28,9 +29,9 @@ export function ExportDialog({
   content: React.ReactNode;
   handleExport: () => void;
   noofRecords: number;
+  open: boolean;
+  setOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }) {
-  const [open, setOpen] = useState(false);
-
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
       <AlertDialogTrigger asChild>

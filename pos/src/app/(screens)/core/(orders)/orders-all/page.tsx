@@ -32,6 +32,7 @@ import { BasicDataFetch, formatDate } from "@/utils/common";
 import { AlertDialogAction } from "@radix-ui/react-alert-dialog";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
+import { set } from "lodash";
 import {
   BadgeCheck,
   Check,
@@ -81,6 +82,7 @@ const AllOrders = () => {
   const { data: session } = useSession();
   const role = session?.user.role.toLowerCase();
   const [query, setQuery] = useState(session?.user.counterNo ?? "01-");
+  const [open, setOpen] = useState(false);
 
   const debouncedQuery = useDebounce(query.replace(/-/g, ""));
   const disableDefaultFilters = debouncedQuery.length > 2;
@@ -434,6 +436,8 @@ const AllOrders = () => {
 
           <TipWrapper triggerText="Export as Excel">
             <ExportDialog
+              open={open}
+              setOpen={setOpen}
               noofRecords={filteredOrders.length}
               title="Export the Order Data"
               description={`Records ready to export as selected filtered`}

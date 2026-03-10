@@ -40,6 +40,7 @@ const Expenses = () => {
   const [paymentmode, setPaymentMode] = useState("All");
   const { data: session, status } = useSession();
   const role = session?.user.role.toLowerCase();
+  const [open, setOpen] = useState(false);
 
   const {
     data: expenses,
@@ -350,6 +351,8 @@ const Expenses = () => {
 
             <TipWrapper triggerText="Export as Excel">
               <ExportDialog
+                open={open}
+                setOpen={setOpen}
                 noofRecords={filteredExpenses.length}
                 title="Export the Expense Data"
                 description={`Records ready to export as selected filtered`}
