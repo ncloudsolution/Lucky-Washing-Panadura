@@ -975,7 +975,7 @@ const Dashboard = () => {
               <ExportDialog
                 open={open}
                 setOpen={setOpen}
-                noofRecords={1}
+                noofRecords={allData?.orderRecords.length ?? 0}
                 title="Export the Dashbaord Data"
                 description={`Records ready to export as selected filtered`}
                 loading={
