@@ -81,7 +81,8 @@ const AllOrders = () => {
   const [odStatus, setOdStatus] = useState("All");
   const { data: session } = useSession();
   const role = session?.user.role.toLowerCase();
-  const [query, setQuery] = useState(session?.user.counterNo ?? "01-");
+  const counterNo = session?.user?.counter ? `${session.user.counter}-` : "01-";
+  const [query, setQuery] = useState(counterNo);
   const [open, setOpen] = useState(false);
 
   const debouncedQuery = useDebounce(query.replace(/-/g, ""));
