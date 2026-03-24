@@ -8,6 +8,7 @@ export const posFrontend = {
   products: "/core/products",
   customers: "/core/customers",
   expenses: "/core/expenses",
+  incomes: "/core/incomes",
   dashboard: "/core/dashboard",
   optionsBarcodePrint: "/core/options-barcode-print",
   optionsConfigurations: "/core/options-configurations",

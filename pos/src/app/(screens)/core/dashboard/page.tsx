@@ -275,7 +275,7 @@ const Dashboard = () => {
       allData?.incomeRecords.length === 0 ||
       allData?.orderRecords.length === 0
     ) {
-      return toast.error("No data to export");
+      return toast.error("Not enough metrics available to complete export");
     }
 
     const purifiedExpenses = allData.expenseRecords.map((i) => {

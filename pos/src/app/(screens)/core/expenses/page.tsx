@@ -66,7 +66,7 @@ const Expenses = () => {
       // 1️⃣ Try cache (correct field)
       const meta = await getBusinessMeta();
 
-      if (meta?.incomeCategories?.length) {
+      if (meta?.expenseCategories?.length) {
         return [...meta.expenseCategories];
       }
 
