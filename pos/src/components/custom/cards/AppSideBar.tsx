@@ -23,6 +23,7 @@ import {
   Warehouse,
   CircleDollarSign,
   Split,
+  Wallet,
 } from "lucide-react";
 
 const items = [
@@ -41,6 +42,11 @@ const items = [
       posFrontend.ordersHistory,
     ],
     icon: Archive,
+  },
+  {
+    title: "Incomes",
+    urls: [posFrontend.incomes],
+    icon: Wallet,
   },
   {
     title: "Expenses",

@@ -442,7 +442,7 @@ const AllOrders = () => {
               noofRecords={filteredOrders.length}
               title="Export the Order Data"
               description={`Records ready to export as selected filtered`}
-              loading={isLoading || isLoadingDebounce || disableDefaultFilters}
+              loading={isLoading || isLoadingDebounce}
               handleExport={handleExport}
               content={
                 <div className="flex flex-col gap-2 py-3">

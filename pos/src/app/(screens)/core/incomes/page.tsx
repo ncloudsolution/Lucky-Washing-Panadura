@@ -1,12 +1,13 @@
 "use client";
 import { BasicHoverCard } from "@/components/custom/cards/BasicHoverCard";
 import NoRecordsCard from "@/components/custom/cards/NoRecordsCard";
-import { AddNewDialog } from "@/components/custom/dialogs/AddNewDialog";
-import { DeleteDialog } from "@/components/custom/dialogs/DeleteDialog";
-import FormExpense, { IExpense } from "@/components/custom/forms/FormExpense";
+import { ExportDialog } from "@/components/custom/dialogs/ExportDialog";
 import { DatePickerWithRange } from "@/components/custom/inputs/DatePickerWithRange";
-import ViewAccessChecker from "@/components/custom/other/AccessChecker";
+import { SelectOnSearch } from "@/components/custom/inputs/SelectOnSearch";
 import ListSkeleton from "@/components/custom/skeleton/ListSkeleton";
+import TextSkeleton from "@/components/custom/skeleton/TextSkeleton";
+import { TipWrapper } from "@/components/custom/wrapper/TipWrapper";
+import { FieldLabel } from "@/components/ui/field";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   ensureClientInit,
@@ -14,33 +15,39 @@ import {
   saveCategory,
 } from "@/data/dbcache";
 import { BasicDataFetch, formatDate } from "@/utils/common";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Coins, NotepadText, Pencil, TextAlignJustify } from "lucide-react";
-import { useSession } from "next-auth/react";
+import { Coins, NotepadText, TextAlignJustify } from "lucide-react";
 import React, { useState } from "react";
 import { DateRange } from "react-day-picker";
 import { toast } from "sonner";
 import { getTodayRange } from "../(orders)/orders-all/page";
-import { SelectOnSearch } from "@/components/custom/inputs/SelectOnSearch";
-import { FieldLabel } from "@/components/ui/field";
-import { TipWrapper } from "@/components/custom/wrapper/TipWrapper";
-import { ExportDialog } from "@/components/custom/dialogs/ExportDialog";
-import { format } from "date-fns";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useSession } from "next-auth/react";
+import { IExpense } from "@/components/custom/forms/FormExpense";
 import { PaymentMethod, TPaymentMethod } from "@/data";
-import TextSkeleton from "@/components/custom/skeleton/TextSkeleton";
+import { Input } from "@/components/ui/input";
+import { useDebounce } from "@/hooks/useDebounce";
+import { IIncome } from "@/components/custom/forms/FormIncome";
+import { OrderSheet } from "@/components/custom/other/OrderSheet";
+import { format } from "date-fns";
 import * as XLSX from "xlsx-js-style";
 
-const Expenses = () => {
+const Income = () => {
   const [dates, setDates] = React.useState<DateRange | undefined>(
     getTodayRange(new Date()),
   );
 
   const queryClient = useQueryClient();
-  const [expCategory, setExpCategory] = useState("All");
+
   const [paymentmode, setPaymentMode] = useState("All");
+  const [paymentType, setPaymentType] = useState("All");
   const { data: session, status } = useSession();
   const role = session?.user.role.toLowerCase();
+  const counterNo = session?.user?.counter ? `${session.user.counter}-` : "01-";
+  const [query, setQuery] = useState(counterNo);
   const [open, setOpen] = useState(false);
+
+  const debouncedQuery = useDebounce(query.replace(/-/g, ""));
+  const disableDefaultFilters = debouncedQuery.length > 2;
 
   const {
     data: expenses,
@@ -48,57 +55,57 @@ const Expenses = () => {
     error,
   } = useQuery({
     // queryKey: ["recent-expenses"],
-    queryKey: ["expenses", dates],
+    queryKey: ["income", dates],
     queryFn: () =>
       BasicDataFetch({
         method: "GET",
-        endpoint: `/api/company/expense?from=${dates?.from}&to=${dates?.to}`,
+        endpoint: `/api/company/income?from=${dates?.from}&to=${dates?.to}`,
       }),
-    select: (response) => response?.data as IExpense[],
+    select: (response) => response?.data as (IIncome & { invoiceId: string })[],
     staleTime: 1000 * 60 * 5,
   });
 
-  const { data: expenseArray = [], isLoading: isExpenseArray } = useQuery({
-    queryKey: ["expense-categories"],
-    queryFn: async (): Promise<string[]> => {
-      await ensureClientInit();
-
-      // 1️⃣ Try cache (correct field)
-      const meta = await getBusinessMeta();
-
-      if (meta?.expenseCategories?.length) {
-        return [...meta.expenseCategories];
-      }
-
-      // 2️⃣ Fetch API
-      const response = await BasicDataFetch({
+  const { data: incomeMetasDebounce, isLoading: isLoadingDebounce } = useQuery({
+    queryKey: ["income-debounce", debouncedQuery],
+    queryFn: () =>
+      BasicDataFetch({
         method: "GET",
-        endpoint: "/api/company/categories/expense",
-      });
-
-      const apiCategories: string[] = response?.data ?? [];
-
-      // 3️⃣ Save to cache
-      await saveCategory(apiCategories, "expense");
-
-      return apiCategories;
-    },
+        endpoint: `/api/company/income?debounce=${debouncedQuery}`,
+      }),
+    select: (response) => response?.data as (IIncome & { invoiceId: string })[],
     staleTime: 1000 * 60 * 5,
+    enabled: disableDefaultFilters, // Only fetch when 'search' is truthy
   });
 
   const filteredExpenses = React.useMemo(() => {
+    // When searching (>=3 chars)
+    if (disableDefaultFilters) {
+      return incomeMetasDebounce ?? [];
+    }
     // Default filtering
     if (!expenses) return [];
 
     return expenses.filter((i) => {
-      const categoryMatch = expCategory === "All" || expCategory === i.category;
+      const categoryMatch = paymentType === "All" || paymentType === i.category;
       const paymentModeMatch =
         paymentmode === "All" || paymentmode === i.paymentMethod;
 
       return categoryMatch && paymentModeMatch;
     });
-  }, [expenses, expCategory, paymentmode]);
+  }, [
+    expenses,
+    paymentType,
+    paymentmode,
+    incomeMetasDebounce,
+    disableDefaultFilters,
+  ]);
   console.log(filteredExpenses);
+  function getTotalIncome() {
+    return filteredExpenses.reduce((total, item) => {
+      return total + Number(item.amount);
+    }, 0);
+  }
+
   const handleExport = () => {
     if (filteredExpenses.length === 0) {
       return toast.error("No data to export");
@@ -112,12 +119,14 @@ const Expenses = () => {
         minute: "2-digit",
       });
 
+      const counterId = i.invoiceId.toString().slice(0, 2);
+      const invoiceIdOnly = i.invoiceId.toString().slice(2);
+
       return {
-        branch: i.branch,
-        category: i.category,
+        invoiceId: `${counterId}-${invoiceIdOnly}`,
+        paymentType: i.category,
         amount: Number(i.amount),
         paymentMethod: i.paymentMethod,
-        remarks: i.remarks,
         date: date,
         time: time,
       };
@@ -283,8 +292,8 @@ const Expenses = () => {
       },
       {
         ref: expensesRef,
-        name: "ExpensesTable",
-        displayName: "ExpensesTable",
+        name: "IncomesTable",
+        displayName: "IncomesTable",
         headerRowCount: 1,
         totalsRowCount: 0,
         tableStyleInfo: {
@@ -297,8 +306,8 @@ const Expenses = () => {
       },
     ];
 
-    XLSX.utils.book_append_sheet(workBook, workSheet, "Expenses Sheet");
-    XLSX.writeFile(workBook, `Expenses---${from}---${to}.xlsx`);
+    XLSX.utils.book_append_sheet(workBook, workSheet, "Incomes Sheet");
+    XLSX.writeFile(workBook, `Incomes---${from}---${to}.xlsx`);
 
     toast.success("Data exported successfully");
   };
@@ -312,21 +321,32 @@ const Expenses = () => {
             <DatePickerWithRange
               date={dates}
               setDate={setDates}
-              isLoading={isLoading || isExpenseArray}
+              isLoading={
+                isLoading || disableDefaultFilters || isLoadingDebounce
+              }
             />
 
             <div className="flex min-w-[200px] flex-col gap-1.5">
               <FieldLabel htmlFor="date-picker-range">
-                Search By Expense Category
+                Search By Payment Type
               </FieldLabel>
 
               <SelectOnSearch
-                isLoading={isLoading || isExpenseArray}
+                isLoading={
+                  isLoading || disableDefaultFilters || isLoadingDebounce
+                }
                 icon={<TextAlignJustify className="text-white" size={18} />}
-                selections={["All", ...expenseArray]}
-                value={expCategory}
+                selections={[
+                  "All",
+                  "Full Payment",
+                  "Advance Payment",
+                  "Partial Payment",
+                  "Balance Payment",
+                  "Credit Payment",
+                ]}
+                value={paymentType}
                 onValueChange={(value) => {
-                  setExpCategory(value);
+                  setPaymentType(value);
                   // setSearch("");
                 }}
               />
@@ -338,7 +358,9 @@ const Expenses = () => {
               </FieldLabel>
 
               <SelectOnSearch
-                isLoading={isLoading || isExpenseArray}
+                isLoading={
+                  isLoading || disableDefaultFilters || isLoadingDebounce
+                }
                 icon={<Coins className="text-white" size={18} />}
                 selections={["All", ...PaymentMethod]}
                 value={paymentmode}
@@ -349,14 +371,26 @@ const Expenses = () => {
               />
             </div>
 
+            <div className="flex w-full flex-col gap-1.5">
+              <FieldLabel htmlFor="date-picker-range">
+                Search By Invoice No
+              </FieldLabel>
+              <Input
+                value={query}
+                disabled={isLoading || isLoadingDebounce}
+                className="bg-superbase disabled:bg-gray-500 text-white"
+                onChange={(e) => setQuery(e.target.value)}
+              />
+            </div>
+
             <TipWrapper triggerText="Export as Excel">
               <ExportDialog
                 open={open}
                 setOpen={setOpen}
                 noofRecords={filteredExpenses.length}
-                title="Export the Expense Data"
+                title="Export the Income Data"
                 description={`Records ready to export as selected filtered`}
-                loading={isLoading || isExpenseArray}
+                loading={isLoading || isLoadingDebounce}
                 handleExport={handleExport}
                 content={
                   <div className="flex flex-col gap-2 py-3">
@@ -369,9 +403,9 @@ const Expenses = () => {
                         </div>
                       </div>
                       <div className="flex w-full justify-between">
-                        <div className="font-semibold">Expense Category</div>
+                        <div className="font-semibold">Payment Type</div>
                         <div className="text-muted-foreground">
-                          {expCategory}
+                          {paymentType}
                         </div>
                       </div>
                       <div className="flex w-full justify-between">
@@ -399,12 +433,26 @@ const Expenses = () => {
           </div>
 
           <div className="flex items-center gap-5 text-sm font-normal">
-            {filteredExpenses && !isLoading && !isExpenseArray ? (
-              <div className="flex flex-col justify-center items-center text-superbase">
-                <span className="text-5xl font-semibold">
-                  {filteredExpenses?.length}
-                </span>
-                <span>Records Found</span>
+            {filteredExpenses && !isLoading && !isLoadingDebounce ? (
+              <div className="flex gap-5">
+                <div className="flex flex-col gap-1.5">
+                  <FieldLabel htmlFor="date-picker-range">
+                    Total Income
+                  </FieldLabel>
+                  <span className="text-base font-medium flex items-center border-2 rounded-sm px-3 w-fit border-superbase h-10 text-superbase">
+                    Rs.{" "}
+                    {new Intl.NumberFormat("en-US", {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    }).format(Number(getTotalIncome()))}
+                  </span>
+                </div>
+                <div className="flex flex-col justify-center items-center text-superbase">
+                  <span className="text-5xl font-semibold">
+                    {filteredExpenses?.length}
+                  </span>
+                  <span>Records Found</span>
+                </div>
               </div>
             ) : (
               <div className="flex flex-col justify-center items-center text-muted-foreground">
@@ -417,40 +465,19 @@ const Expenses = () => {
                 <span>Records Found</span>
               </div>
             )}
-            <ViewAccessChecker
-              permission="create:categories"
-              userRole={role}
-              component={
-                <AddNewDialog
-                  form={
-                    <FormExpense
-                      expenseArray={expenseArray}
-                      dates={dates as DateRange}
-                    />
-                  }
-                  triggerText="Add Expense"
-                />
-              }
-              skeleton={
-                <Skeleton className="size-[40px] rounded-sm bg-gray-300 border-slate-400" />
-              }
-            />
           </div>
         </div>
 
         <div className="flex font-semibold text-muted-foreground mb-2 px-4 justify-between gap-5">
-          <div className="flex-1">Category</div>
-          <div className="flex-1 text-center">Amount</div>
+          <div className="flex-1">Invoice Id</div>
+          <div className="flex-1 text-center">Payment Type</div>
           <div className="flex-1 text-center">Payment Mode</div>
+          <div className="flex-1 text-center">Amount</div>
           <div className="flex-1">CreatedAt</div>
-          <div className="flex justify-end gap-2">
-            <div className="w-[30px]" />
-            <div className="w-[30px]" />
-            {/* <div className="w-[30px]" /> */}
-          </div>
+          <div className="w-[30px]" />
         </div>
 
-        {isLoading ? (
+        {isLoading || isLoadingDebounce ? (
           <ListSkeleton height={60} length={10} />
         ) : filteredExpenses && filteredExpenses?.length > 0 ? (
           <div className="flex flex-col h-full justify-between gap-2 ">
@@ -461,101 +488,33 @@ const Expenses = () => {
                 if (!createdAt) return null;
 
                 const [date, time] = formatDate(createdAt.toLocaleString());
+                const invoice = ex.invoiceId;
+
+                const counterId = invoice.slice(0, 2);
+                const invoiceIdOnly = invoice.slice(2);
 
                 return (
                   <div
                     key={index}
                     className={`flex justify-between items-center gap-5 py-3 px-4 group hover:bg-muted bg-background shadow rounded-md border border-transparent hover:border-gray-400`}
                   >
-                    <div className="flex gap-2 flex-1">
-                      <>
-                        <div
-                          className={`${
-                            ex.remarks
-                              ? "bg-superbase text-white hover:cursor-pointer"
-                              : "bg-input pointer-events-none"
-                          } size-[25px] rounded-full flex justify-center items-center`}
-                        >
-                          <BasicHoverCard
-                            title="Remarks"
-                            description={ex.remarks}
-                            triggerBtn={<NotepadText className="size-[14px]" />}
-                          />
-                        </div>
-                      </>
-                      {ex.category}
+                    <div className="flex flex-1 font-medium">
+                      {counterId}-{invoiceIdOnly}
                     </div>
+                    <div className="flex-1 text-center">{ex.category}</div>
+                    <div className="flex-1 text-center">{ex.paymentMethod}</div>
                     <div className="flex-1 text-center">
-                      {" "}
                       {new Intl.NumberFormat("en-US", {
                         minimumFractionDigits: 2,
                         maximumFractionDigits: 2,
                       }).format(ex.amount)}
                     </div>
-                    <div className="flex-1 text-center">{ex.paymentMethod}</div>
+
                     <div className="flex flex-1 gap-2 text-muted-foreground">
                       <span className="font-medium">{date}</span>
                       <span>{time}</span>
                     </div>
-
-                    <ViewAccessChecker
-                      permission="create:categories"
-                      userRole={role}
-                      component={
-                        <AddNewDialog
-                          form={
-                            <FormExpense
-                              dates={dates as DateRange}
-                              type="edit"
-                              data={ex}
-                              expenseArray={expenseArray}
-                            />
-                          }
-                          triggerText="Edit expense"
-                          mini
-                          triggerBtn={<Pencil className="p-1" />}
-                        />
-                      }
-                      skeleton={
-                        <Skeleton className="size-[25px] rounded-sm bg-gray-300 border-slate-400" />
-                      }
-                    />
-
-                    <ViewAccessChecker
-                      permission="create:categories"
-                      userRole={role}
-                      component={
-                        <DeleteDialog
-                          mini
-                          triggerText="Delete expense"
-                          data={`Affected expense : ${ex.id}`}
-                          onClick={async () => {
-                            try {
-                              const res = await BasicDataFetch({
-                                method: "DELETE",
-                                endpoint: "/api/company/expense",
-                                data: { id: ex.id },
-                              });
-
-                              await queryClient.invalidateQueries({
-                                queryKey: ["expenses", dates],
-                              });
-
-                              toast.success(res.message);
-                            } catch (err) {
-                              const errorMessage =
-                                err instanceof Error
-                                  ? err.message
-                                  : "An error occurred";
-                              toast.error(errorMessage);
-                            }
-                          }}
-                        />
-                      }
-                      skeleton={
-                        <Skeleton className="size-[25px] rounded-sm bg-gray-300 border-slate-400" />
-                      }
-                    />
+                    <OrderSheet id={ex.orderId!} />
                   </div>
                 );
               })}
@@ -574,4 +533,4 @@ const Expenses = () => {
   );
 };
 
-export default Expenses;
+export default Income;
