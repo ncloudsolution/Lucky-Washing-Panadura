@@ -28,6 +28,8 @@ import { Input } from "@/components/ui/input";
 import { useDebounce } from "@/hooks/useDebounce";
 import { IIncome } from "@/components/custom/forms/FormIncome";
 import { OrderSheet } from "@/components/custom/other/OrderSheet";
+import { format } from "date-fns";
+import * as XLSX from "xlsx-js-style";
 
 const Income = () => {
   const [dates, setDates] = React.useState<DateRange | undefined>(
@@ -35,8 +37,9 @@ const Income = () => {
   );
 
   const queryClient = useQueryClient();
-  const [inCategory, setInCategory] = useState("All");
+
   const [paymentmode, setPaymentMode] = useState("All");
+  const [paymentType, setPaymentType] = useState("All");
   const { data: session, status } = useSession();
   const role = session?.user.role.toLowerCase();
   const counterNo = session?.user?.counter ? `${session.user.counter}-` : "01-";
@@ -83,7 +86,7 @@ const Income = () => {
     if (!expenses) return [];
 
     return expenses.filter((i) => {
-      const categoryMatch = inCategory === "All" || inCategory === i.category;
+      const categoryMatch = paymentType === "All" || paymentType === i.category;
       const paymentModeMatch =
         paymentmode === "All" || paymentmode === i.paymentMethod;
 
@@ -91,7 +94,7 @@ const Income = () => {
     });
   }, [
     expenses,
-    inCategory,
+    paymentType,
     paymentmode,
     incomeMetasDebounce,
     disableDefaultFilters,
@@ -102,6 +105,212 @@ const Income = () => {
       return total + Number(item.amount);
     }, 0);
   }
+
+  const handleExport = () => {
+    if (filteredExpenses.length === 0) {
+      return toast.error("No data to export");
+    }
+
+    const purifiedData = filteredExpenses.map((i) => {
+      const dateObj = new Date(i.createdAt);
+      const date = dateObj.toLocaleDateString("en-CA");
+      const time = dateObj.toLocaleTimeString("en-GB", {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+
+      const counterId = i.invoiceId.toString().slice(0, 2);
+      const invoiceIdOnly = i.invoiceId.toString().slice(2);
+
+      return {
+        invoiceId: `${counterId}-${invoiceIdOnly}`,
+        paymentType: i.category,
+        amount: Number(i.amount),
+        paymentMethod: i.paymentMethod,
+        date: date,
+        time: time,
+      };
+    });
+
+    const PAYMENT_METHOD_STYLES: Record<
+      string,
+      { bg: string; whiteText: boolean }
+    > = {
+      Cash: { bg: "1A54DA", whiteText: true },
+      Card: { bg: "104E64", whiteText: true },
+      Bank: { bg: "F4C430", whiteText: false },
+      Credit: { bg: "E34A2F", whiteText: true },
+    };
+
+    const formatDate = (date: Date) => date.toISOString().split("T")[0];
+    const from = formatDate(dates?.from as Date);
+    const to = formatDate(dates?.to as Date);
+
+    const workBook = XLSX.utils.book_new();
+    const workSheet: XLSX.WorkSheet = {};
+
+    const expensesStartRow = 8;
+
+    // ------------------- Breakdown Table FIRST -------------------
+    const excelDataStartRow = expensesStartRow + 2; // 10 (1-based)
+    const excelDataEndRow = excelDataStartRow + purifiedData.length - 1;
+
+    const makeFormula = (method: string) =>
+      `SUMPRODUCT((D${excelDataStartRow}:D${excelDataEndRow}="${method}")*(C${excelDataStartRow}:C${excelDataEndRow})*SUBTOTAL(103,OFFSET(D${excelDataStartRow},ROW(D${excelDataStartRow}:D${excelDataEndRow})-ROW(D${excelDataStartRow}),0)))`;
+
+    const breakdownRows = [
+      { "Payment Method": "Cash", Amount: { f: makeFormula("Cash") } },
+      { "Payment Method": "Card", Amount: { f: makeFormula("Card") } },
+      { "Payment Method": "Bank", Amount: { f: makeFormula("Bank") } },
+      { "Payment Method": "Credit", Amount: { f: makeFormula("Credit") } },
+      { "Payment Method": "TOTAL", Amount: { f: "SUM(B2:B5)" } },
+    ];
+
+    XLSX.utils.sheet_add_json(workSheet, breakdownRows, { origin: "A1" });
+
+    // Style Breakdown header (row 0)
+    ["Payment Method", "Amount"].forEach((_, i) => {
+      const cell = XLSX.utils.encode_cell({ r: 0, c: i });
+      if (workSheet[cell]) {
+        workSheet[cell].s = {
+          fill: { patternType: "solid", fgColor: { rgb: "1E1E2D" } },
+          font: { bold: true, color: { rgb: "FFFFFF" } },
+          alignment: { horizontal: "center" },
+        };
+      }
+    });
+
+    // Payment method colors for breakdown rows
+    PaymentMethod.forEach((method, i) => {
+      const row = i + 1;
+      const cell = XLSX.utils.encode_cell({ r: row, c: 0 });
+      const style = PAYMENT_METHOD_STYLES[method];
+      if (style && workSheet[cell]) {
+        workSheet[cell].s = {
+          fill: { patternType: "solid", fgColor: { rgb: style.bg } },
+          font: {
+            bold: true,
+            ...(style.whiteText && { color: { rgb: "FFFFFF" } }),
+          },
+          alignment: { horizontal: "center" },
+        };
+      }
+    });
+
+    // TOTAL row style (black) — row 5
+    const totalRow = XLSX.utils.encode_cell({ r: 5, c: 0 });
+    if (workSheet[totalRow]) {
+      workSheet[totalRow].s = {
+        fill: { patternType: "solid", fgColor: { rgb: "e3dddc" } },
+        font: { bold: true, color: { rgb: "000000" } },
+        alignment: { horizontal: "center" },
+      };
+    }
+
+    // ------------------- Expenses Table BELOW (gap of 1 row) -------------------
+    // Breakdown: rows 0–5 (header + 4 methods + total) → gap row 6 → expenses start row 7
+
+    XLSX.utils.sheet_add_json(workSheet, purifiedData, {
+      origin: XLSX.utils.encode_cell({ r: expensesStartRow, c: 0 }),
+      skipHeader: false,
+    });
+
+    const headers = Object.keys(purifiedData[0]);
+
+    // Style expenses header row
+    headers.forEach((_, colIndex) => {
+      const headerCell = XLSX.utils.encode_cell({
+        r: expensesStartRow,
+        c: colIndex,
+      });
+      if (workSheet[headerCell]) {
+        workSheet[headerCell].s = {
+          fill: { patternType: "solid", fgColor: { rgb: "1E1E2D" } },
+          font: { bold: true, color: { rgb: "FFFFFF" } },
+          alignment: { horizontal: "center" },
+        };
+      }
+    });
+
+    // Style expenses data rows
+    const expensesRange = XLSX.utils.decode_range(workSheet["!ref"]!);
+    for (let R = expensesStartRow + 1; R <= expensesRange.e.r; ++R) {
+      for (let C = 0; C <= headers.length - 1; ++C) {
+        const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+        if (!workSheet[cellAddress]) continue;
+        workSheet[cellAddress].s = { alignment: { horizontal: "center" } };
+      }
+    }
+
+    // Payment method colors for expenses rows
+    const paymentMethodColIndex = headers.indexOf("paymentMethod");
+    if (paymentMethodColIndex !== -1) {
+      const statusColLetter = XLSX.utils.encode_col(paymentMethodColIndex);
+      purifiedData.forEach((expense, rowIndex) => {
+        const cellAddress = `${statusColLetter}${expensesStartRow + rowIndex + 2}`;
+        const method = expense.paymentMethod as TPaymentMethod;
+        const style = PAYMENT_METHOD_STYLES[method];
+        if (style && workSheet[cellAddress]) {
+          workSheet[cellAddress].s = {
+            fill: { patternType: "solid", fgColor: { rgb: style.bg } },
+            font: {
+              bold: true,
+              ...(style.whiteText && { color: { rgb: "FFFFFF" } }),
+            },
+            alignment: { horizontal: "center" },
+          };
+        }
+      });
+    }
+
+    // Column widths
+    workSheet["!cols"] = headers.map(() => ({ wch: 20 }));
+
+    // Autofilter on expenses table only
+    const expensesHeaderRef = XLSX.utils.encode_cell({
+      r: expensesStartRow,
+      c: 0,
+    });
+    const expensesEndRef = XLSX.utils.encode_cell({
+      r: expensesRange.e.r,
+      c: headers.length - 1,
+    });
+    workSheet["!autofilter"] = {
+      ref: `${expensesHeaderRef}:${expensesEndRef}`,
+    };
+
+    const breakdownRef = "A1:B6";
+    const expensesRef = `${expensesHeaderRef}:${expensesEndRef}`;
+
+    workSheet["!tables"] = [
+      {
+        ref: breakdownRef,
+        name: "BreakdownTable",
+        displayName: "BreakdownTable",
+        headerRowCount: 1,
+        tableStyleInfo: { name: "TableStyleMedium2", showRowStripes: true },
+      },
+      {
+        ref: expensesRef,
+        name: "IncomesTable",
+        displayName: "IncomesTable",
+        headerRowCount: 1,
+        totalsRowCount: 0,
+        tableStyleInfo: {
+          name: "TableStyleMedium2",
+          showFirstColumn: false,
+          showLastColumn: false,
+          showRowStripes: true,
+          showColumnStripes: false,
+        },
+      },
+    ];
+
+    XLSX.utils.book_append_sheet(workBook, workSheet, "Incomes Sheet");
+    XLSX.writeFile(workBook, `Incomes---${from}---${to}.xlsx`);
+
+    toast.success("Data exported successfully");
+  };
 
   return (
     <div className="flex relative w-full text-sm">
@@ -135,9 +344,9 @@ const Income = () => {
                   "Balance Payment",
                   "Credit Payment",
                 ]}
-                value={inCategory}
+                value={paymentType}
                 onValueChange={(value) => {
-                  setInCategory(value);
+                  setPaymentType(value);
                   // setSearch("");
                 }}
               />
@@ -174,53 +383,53 @@ const Income = () => {
               />
             </div>
 
-            {/*<TipWrapper triggerText="Export as Excel">
-                 <ExportDialog
-                  open={open}
-                  setOpen={setOpen}
-                  noofRecords={filteredExpenses.length}
-                  title="Export the Expense Data"
-                  description={`Records ready to export as selected filtered`}
-                  loading={isLoading || isExpenseArray}
-                  handleExport={handleExport}
-                  content={
-                    <div className="flex flex-col gap-2 py-3">
-                      <div className="flex flex-col gap-1">
-                        <div className="flex w-full justify-between">
-                          <div className="font-semibold">Date Range</div>
-                          <div className="text-muted-foreground">
-                            {dates?.from ? format(dates.from, "LLL dd, y") : ""}{" "}
-                            - {dates?.to ? format(dates.to, "LLL dd, y") : ""}
-                          </div>
-                        </div>
-                        <div className="flex w-full justify-between">
-                          <div className="font-semibold">Expense Category</div>
-                          <div className="text-muted-foreground">
-                            {expCategory}
-                          </div>
-                        </div>
-                        <div className="flex w-full justify-between">
-                          <div className="font-semibold">Payment Mode</div>
-                          <div className="text-muted-foreground">
-                            {paymentmode}
-                          </div>
+            <TipWrapper triggerText="Export as Excel">
+              <ExportDialog
+                open={open}
+                setOpen={setOpen}
+                noofRecords={filteredExpenses.length}
+                title="Export the Income Data"
+                description={`Records ready to export as selected filtered`}
+                loading={isLoading || isLoadingDebounce}
+                handleExport={handleExport}
+                content={
+                  <div className="flex flex-col gap-2 py-3">
+                    <div className="flex flex-col gap-1">
+                      <div className="flex w-full justify-between">
+                        <div className="font-semibold">Date Range</div>
+                        <div className="text-muted-foreground">
+                          {dates?.from ? format(dates.from, "LLL dd, y") : ""} -{" "}
+                          {dates?.to ? format(dates.to, "LLL dd, y") : ""}
                         </div>
                       </div>
-
-                      <div className="flex w-full justify-between text-green-700">
-                        <div className="font-semibold">No of Records</div>
-                        <div>{filteredExpenses.length}</div>
+                      <div className="flex w-full justify-between">
+                        <div className="font-semibold">Payment Type</div>
+                        <div className="text-muted-foreground">
+                          {paymentType}
+                        </div>
                       </div>
-
-                      <div className="text-muted-foreground text-sm">
-                        If your selected filters won’t meet your export needs,
-                        please cancel, adjust the filters on the Orders main
-                        screen, and try exporting again
+                      <div className="flex w-full justify-between">
+                        <div className="font-semibold">Payment Mode</div>
+                        <div className="text-muted-foreground">
+                          {paymentmode}
+                        </div>
                       </div>
                     </div>
-                  }
-                /> 
-              </TipWrapper>*/}
+
+                    <div className="flex w-full justify-between text-green-700">
+                      <div className="font-semibold">No of Records</div>
+                      <div>{filteredExpenses.length}</div>
+                    </div>
+
+                    <div className="text-muted-foreground text-sm">
+                      If your selected filters won’t meet your export needs,
+                      please cancel, adjust the filters on the Orders main
+                      screen, and try exporting again
+                    </div>
+                  </div>
+                }
+              />
+            </TipWrapper>
           </div>
 
           <div className="flex items-center gap-5 text-sm font-normal">
