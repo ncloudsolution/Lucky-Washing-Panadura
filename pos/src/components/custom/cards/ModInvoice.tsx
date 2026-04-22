@@ -27,7 +27,7 @@ export interface IInvoice {
     address: string;
     hotlines: string[];
     operator: string;
-    counterNo: number;
+    counterNo: string;
     customer: string;
     customerMobile: string;
     customerCreatedAt: string;

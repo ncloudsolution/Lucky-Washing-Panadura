@@ -235,7 +235,11 @@ export const POST = auth(async function POST(req: any) {
     );
   } catch (err) {
     return NextResponse.json(
-      { success: false, message: "Check your connection and try again" },
+      {
+        success: false,
+        message: "Check your connection and try again",
+        extra: err,
+      },
       { status: 500 },
     );
   }

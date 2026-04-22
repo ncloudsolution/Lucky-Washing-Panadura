@@ -134,6 +134,7 @@ export function getSyncStatus() {
   return syncStatus;
 }
 
+//old working
 export async function forceProcessQueue() {
   console.log("🔁 Manual queue retry triggered");
 
@@ -150,3 +151,21 @@ export async function forceProcessQueue() {
 
   await processOrderQueue();
 }
+
+// export async function forceProcessQueue() {
+//   console.log("🔁 Manual queue retry triggered Newwwwww");
+
+//   if (retryTimeout) {
+//     clearTimeout(retryTimeout);
+//     retryTimeout = null;
+//   }
+
+//   if (isProcessingQueue) {
+//     console.log("⏳ Already processing, skip force");
+//     return;
+//   }
+
+//   setSyncStatus("syncing");
+
+//   await processOrderQueue();
+// }

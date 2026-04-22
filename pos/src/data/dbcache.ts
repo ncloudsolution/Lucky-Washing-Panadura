@@ -62,7 +62,7 @@ cachedb
     businessMeta:
       "id,businessName,businessLogo,ownerName,ownerMobileNos,categories,sms",
     client:
-      "id,lastProductFetch,lastOrderId,editMode,edCustomerMobile,edCustomerPaymentMethod,edDeliveryfee,edPaymentPortion,nextInvoiceIdSuffix",
+      "id,lastProductFetch,lastOrderId,editMode,edCustomerMobile,edCustomerPaymentMethod,edDeliveryfee,edPaymentPortion,nextInvoiceIdSuffix,counterId,operator,branch",
     cartItem:
       "++id,name,variationName,priceVariation,image,productVarientId,unitPrice,quantity",
     holdedCartItem:
@@ -113,6 +113,9 @@ export async function ensureClientInit() {
       edPaymentPortion: "Full Payment",
       edPaymentPortionAmount: null,
       nextInvoiceIdSuffix: "notset",
+      counterId: null,
+      operator: null,
+      branch: null,
     });
   }
 }
@@ -365,8 +368,21 @@ export async function saveAllProductWithVariants({
   );
 
   // Update timestamp without wiping DB
-  await cachedb.client.put({
-    id: clientPrimaryKey,
+  //   await cachedb.client.put({
+  //     id: clientPrimaryKey,
+  //     lastProductFetch,
+  //     editMode: false,
+  //     edCustomerMobile: globalDefaultCustomer.enable
+  //       ? globalDefaultCustomer.mobile
+  //       : null,
+  //     edCustomerPaymentMethod: "Cash",
+  //     edDeliveryfee: null,
+  //     edPaymentPortion: "Full Payment",
+  //     edPaymentPortionAmount: null,
+  //     nextInvoiceIdSuffix: "notset",
+  //   });
+  // }
+  await cachedb.client.update(clientPrimaryKey, {
     lastProductFetch,
     editMode: false,
     edCustomerMobile: globalDefaultCustomer.enable

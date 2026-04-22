@@ -5,7 +5,7 @@ import { IIncome } from "@/components/custom/forms/FormIncome";
 import { IExpense } from "@/components/custom/forms/FormExpense";
 
 //change done by sohan
-export const devMode = true;
+export const devMode = false;
 export const BaseUrl = devMode
   ? "http://localhost:3000"
   : "https://lucky-washing-panadura.vercel.app";
@@ -399,6 +399,9 @@ export interface IClient {
   edPaymentPortion: string;
   edPaymentPortionAmount: number | null;
   nextInvoiceIdSuffix: string;
+  counterId: string | null;
+  operator: string | null;
+  branch: string | null;
 }
 
 interface ICartVariation {
