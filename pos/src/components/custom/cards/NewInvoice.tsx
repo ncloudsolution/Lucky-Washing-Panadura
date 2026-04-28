@@ -26,7 +26,7 @@ export interface IInvoice {
     address: string;
     hotlines: string[];
     operator: string;
-    counterNo: number;
+    counterNo: string;
     customer: string;
     customerMobile: string;
     customerCreatedAt: string;
@@ -231,7 +231,7 @@ const NewInvoice = ({
                   </div>
                 </div>
               </div>
-            ))
+            )),
           )}
 
           {data.baseData.deliveryfee && (
@@ -295,7 +295,7 @@ const NewInvoice = ({
               }).format(
                 Number(data.baseData.saleValue) +
                   Number(data.baseData.deliveryfee ?? 0) -
-                  Number(data.baseData.paymentAmount)
+                  Number(data.baseData.paymentAmount),
               )}
             </span>
           </div>

@@ -230,16 +230,23 @@ export const POST = auth(async function POST(req: any) {
         success: true,
         message: "Order created successfully",
         data: defaultPrint ? invoiceData : newOrder,
+        test: "new change done",
       },
       { status: 201 },
     );
   } catch (err) {
     return NextResponse.json(
-      { success: false, message: "Check your connection and try again" },
+      {
+        success: false,
+        message: "Check your connection and try again",
+        extra: err,
+      },
       { status: 500 },
     );
   }
 }) as (req: Request) => Promise<Response>;
+
+// NEW CHANGE ABOVE
 
 //edit order
 export const PUT = auth(async function PUT(req: any) {

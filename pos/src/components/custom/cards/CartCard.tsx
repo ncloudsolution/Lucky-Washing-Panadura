@@ -113,47 +113,68 @@ const CartCard = () => {
     staleTime: 1000 * 60 * 5,
     enabled: !!session?.user.id,
   });
-  const finalNextInvoiceId: string =
-    session?.user.counterNo + nextInvoiceIdSuffix;
 
   useEffect(() => {
-    async function Cli() {
-      const companyMetaCli = await ensureBusinessInit();
-      const allBranchesCli = await ensureBranchesInit();
-      const branchDetails = allBranchesCli.find(
-        (i) => i.branch === session?.user.branch,
-      );
+    if (status !== "authenticated") return;
 
-      const data = {
-        id: "x",
-        invoiceId: finalNextInvoiceId,
-        createdAt: Date.now(),
-        saleValue: total,
-        deliveryfee: deliveryfee,
-        status: "Processing",
+    (async () => {
+      const existing = await cachedb.client.get(clientPrimaryKey);
 
-        paymentMethod: activeOption,
-        incomeCategory: paymentPortion,
-        paymentAmount:
-          paymentPortion === "Advance Payment" ||
-          paymentPortion === "Credit Payment"
-            ? paymentPortionAmount
-            : total + deliveryfee,
+      if (!existing?.counterId) {
+        const counterId = session?.user.counterNo;
+        const operator = session?.user.id;
+        const branch = session?.user.branch;
 
-        business: companyMetaCli.businessName,
-        branch: session?.user.branch,
-        address: branchDetails?.address,
-        hotlines: branchDetails?.hotlines,
-        operator: session?.user.id,
-        counterNo: session?.user.counterNo,
+        await cachedb.client.update(clientPrimaryKey, {
+          counterId,
+          operator,
+          branch,
+        });
+      }
+    })();
+  }, [status]);
 
-        //this data get only for sheet not the invoice
-        customer: "x",
-        customerMobile: "x",
-        customerCreatedAt: Date.now(),
-      };
-    }
-  });
+  // const finalNextInvoiceId: string =
+  //   session?.user.counterNo + nextInvoiceIdSuffix;
+
+  // useEffect(() => {
+  //   async function Cli() {
+  //     const companyMetaCli = await ensureBusinessInit();
+  //     const allBranchesCli = await ensureBranchesInit();
+  //     const branchDetails = allBranchesCli.find(
+  //       (i) => i.branch === session?.user.branch,
+  //     );
+
+  //     const data = {
+  //       id: "x",
+  //       invoiceId: finalNextInvoiceId,
+  //       createdAt: Date.now(),
+  //       saleValue: total,
+  //       deliveryfee: deliveryfee,
+  //       status: "Processing",
+
+  //       paymentMethod: activeOption,
+  //       incomeCategory: paymentPortion,
+  //       paymentAmount:
+  //         paymentPortion === "Advance Payment" ||
+  //         paymentPortion === "Credit Payment"
+  //           ? paymentPortionAmount
+  //           : total + deliveryfee,
+
+  //       business: companyMetaCli.businessName,
+  //       branch: session?.user.branch,
+  //       address: branchDetails?.address,
+  //       hotlines: branchDetails?.hotlines,
+  //       operator: session?.user.id,
+  //       counterNo: session?.user.counterNo,
+
+  //       //this data get only for sheet not the invoice
+  //       customer: "x",
+  //       customerMobile: "x",
+  //       customerCreatedAt: Date.now(),
+  //     };
+  //   }
+  // });
 
   const orderType = useLiveQuery(async () => {
     return getOrderType();
@@ -236,6 +257,14 @@ const CartCard = () => {
     const start = performance.now();
     setIsSubmitting(true);
 
+    const client = await cachedb.client.get(clientPrimaryKey);
+    const counterId = client?.counterId;
+    const operator = client?.operator;
+    const branch = client?.branch;
+
+    const finalNextInvoiceId: string =
+      (counterId as string) + nextInvoiceIdSuffix;
+
     const newErrorState = { ...initialErrorState };
 
     // 1️⃣ Delivery fee validation
@@ -301,9 +330,9 @@ const CartCard = () => {
       orderMeta: {
         //id,customerId, -- should include
         ...(orderType?.editMode ? { id: orderType.lastOrderId } : {}), //get user id:currentOrderId via dexie func
-        operator: session?.user.id,
+        operator: operator, //session?.user.id,
         invoiceId: finalNextInvoiceId,
-        branch: session?.user.branch,
+        branch: branch, //session?.user.branch,
         paymentMethod: activeOption,
         paymentPortion: paymentPortion,
         paymentPortionAmount:
@@ -349,11 +378,11 @@ const CartCard = () => {
             : total + deliveryfee,
 
         business: companyMetaCli?.businessName as string,
-        branch: session?.user.branch,
+        branch: branch as string, //session?.user.branch,
         address: branchDetails?.address as string,
         hotlines: branchDetails?.hotlines as string[],
-        operator: session?.user.id,
-        counterNo: session?.user.counterNo,
+        operator: operator as string, // session?.user.id,
+        counterNo: counterId as string, //session?.user.counterNo,
 
         //this data get only for sheet not the invoice
         customer: currentCustomer?.name as string,
