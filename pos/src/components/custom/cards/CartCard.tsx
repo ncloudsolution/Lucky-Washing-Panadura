@@ -66,6 +66,7 @@ import NewInvoice, { IInvoice } from "./NewInvoice";
 import { addToQueue } from "@/data/queue";
 import ModInvoice from "./ModInvoice";
 import { getTodayRange } from "@/app/(screens)/core/(orders)/orders-all/page";
+import { number } from "zod";
 
 const CartCard = () => {
   const queryClient = useQueryClient();
@@ -88,6 +89,8 @@ const CartCard = () => {
       // 1️⃣ Try cache
       const exists = await cachedb.client.get(clientPrimaryKey);
 
+      console.log(exists);
+
       if (
         exists?.nextInvoiceIdSuffix &&
         exists.nextInvoiceIdSuffix !== "notset"
@@ -103,10 +106,9 @@ const CartCard = () => {
 
       const apiId: string = response.data;
 
-      // 3️⃣ Save to cache (safe even if exists is undefined)
-      await cachedb.client.update(clientPrimaryKey, {
-        nextInvoiceIdSuffix: apiId,
-      });
+      // await cachedb.client.update(clientPrimaryKey, {
+      //   nextInvoiceIdSuffix: apiId,
+      // });
 
       return apiId; // ✅ ALWAYS return
     },
@@ -120,7 +122,7 @@ const CartCard = () => {
     (async () => {
       const existing = await cachedb.client.get(clientPrimaryKey);
 
-      if (!existing?.counterId) {
+      if (!existing?.counterId && nextInvoiceIdSuffix) {
         const counterId = session?.user.counterNo;
         const operator = session?.user.id;
         const branch = session?.user.branch;
@@ -129,10 +131,11 @@ const CartCard = () => {
           counterId,
           operator,
           branch,
+          nextInvoiceIdSuffix,
         });
       }
     })();
-  }, [status]);
+  }, [status, nextInvoiceIdSuffix]);
 
   // const finalNextInvoiceId: string =
   //   session?.user.counterNo + nextInvoiceIdSuffix;
@@ -227,6 +230,7 @@ const CartCard = () => {
     deliveryfeeError: false,
     paymentPortionAmountError: false,
     queueError: false,
+    loadError: false,
   };
   const [error, setError] = useState(initialErrorState);
 
@@ -265,7 +269,19 @@ const CartCard = () => {
     const finalNextInvoiceId: string =
       (counterId as string) + nextInvoiceIdSuffix;
 
+    console.log(finalNextInvoiceId);
+
     const newErrorState = { ...initialErrorState };
+
+    if (
+      isLoading ||
+      counterId === undefined ||
+      operator === undefined ||
+      branch === undefined ||
+      nextInvoiceIdSuffix === undefined
+    ) {
+      newErrorState.loadError = true;
+    }
 
     // 1️⃣ Delivery fee validation
     if (deliveryfee === 0 && remoteOrder) {
@@ -295,6 +311,7 @@ const CartCard = () => {
 
     // 🚨 If ANY error exists
     if (
+      newErrorState.loadError ||
       newErrorState.deliveryfeeError ||
       newErrorState.paymentPortionAmountError ||
       newErrorState.customerError ||
@@ -311,6 +328,8 @@ const CartCard = () => {
         toast.error("Delivery fee should include the order");
       } else if (newErrorState.queueError) {
         toast.error("Queue full. Submit after it drops below 10.");
+      } else if (newErrorState.loadError) {
+        toast.error("Essentail Data still loading! Please try again later");
       }
 
       return;
