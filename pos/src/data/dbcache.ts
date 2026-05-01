@@ -392,7 +392,7 @@ export async function saveAllProductWithVariants({
     edDeliveryfee: null,
     edPaymentPortion: "Full Payment",
     edPaymentPortionAmount: null,
-    nextInvoiceIdSuffix: "notset",
+    // nextInvoiceIdSuffix: "notset",
   });
 }
 
