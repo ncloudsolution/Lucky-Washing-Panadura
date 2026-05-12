@@ -208,7 +208,7 @@ const Dashboard = () => {
     ...branches,
     ...(session?.user.role.toLowerCase() === "director"
       ? ["All Branches"]
-      : []),
+      : ["No Access"]),
   ];
 
   const allBranchesObj =
