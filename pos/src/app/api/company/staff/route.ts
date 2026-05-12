@@ -43,39 +43,39 @@ export const POST = auth(async function POST(req: any) {
 
     // take this from authjs
     // authentication & permission check
-    // if (!req.auth) {
-    //   return NextResponse.json(
-    //     {
-    //       success: false,
-    //       message: "you are not authenticated",
-    //       error: "UNAUTHORIZED",
-    //     },
-    //     { status: 401 }
-    //   );
-    // }
+    if (!req.auth) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "you are not authenticated",
+          error: "UNAUTHORIZED",
+        },
+        { status: 401 },
+      );
+    }
 
-    // const authRole = (req.auth?.user?.role?.toLowerCase() ||
-    //   "system") as T_Role;
-    // const authBranch = req.auth?.user?.branch.toLowerCase() || "homagama";
+    const authRole = (req.auth?.user?.role?.toLowerCase() ||
+      "system") as T_Role;
+    const authBranch = req.auth?.user?.branch.toLowerCase() || "homagama";
 
-    // // const authRole = "system" as T_Role;
-    // // const authBranch = "homagama";
+    // const authRole = "system" as T_Role;
+    // const authBranch = "homagama";
 
-    // const resourceBranch = data.branch.toLowerCase();
+    const resourceBranch = data.branch.toLowerCase();
 
-    // if (
-    //   !hasPermission({
-    //     userRole: authRole,
-    //     permission: "create:staff",
-    //     resourceBranch,
-    //     userBranch: authBranch,
-    //   })
-    // ) {
-    //   return NextResponse.json(
-    //     { success: false, message: "Not authorized" },
-    //     { status: 403 }
-    //   );
-    // }
+    if (
+      !hasPermission({
+        userRole: authRole,
+        permission: "create:staff",
+        resourceBranch,
+        userBranch: authBranch,
+      })
+    ) {
+      return NextResponse.json(
+        { success: false, message: "Not authorized" },
+        { status: 403 },
+      );
+    }
 
     //check duplications
     const existingStaff = await prisma.staff.findFirst({
@@ -87,7 +87,7 @@ export const POST = auth(async function POST(req: any) {
     if (existingStaff) {
       return NextResponse.json(
         { success: false, message: "Email or mobile already exists" },
-        { status: 409 }
+        { status: 409 },
       );
     }
 
@@ -110,7 +110,7 @@ export const POST = auth(async function POST(req: any) {
         if (existingUniter) {
           return NextResponse.json(
             { success: false, message: "System can have only one Uniter" },
-            { status: 409 }
+            { status: 409 },
           );
         }
 
@@ -148,12 +148,12 @@ export const POST = auth(async function POST(req: any) {
 
     return NextResponse.json(
       { success: true, message: "User added successfully" },
-      { status: 201 }
+      { status: 201 },
     );
   } catch (err) {
     return NextResponse.json(
       { success: false, message: "Internal Server Error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }) as (req: Request) => Promise<Response>;
@@ -182,7 +182,7 @@ export const GET = auth(async function GET(req: any) {
               data: null,
               error: "INVALID OPERATION",
             },
-            { status: 400 }
+            { status: 400 },
           );
         }
         const member = await prisma.staff.findFirst({
@@ -204,7 +204,7 @@ export const GET = auth(async function GET(req: any) {
             message: "Staff Member Limited Data fetch successfully!",
             data: member,
           },
-          { status: 200 }
+          { status: 200 },
         );
       }
       case "single-rich": {
@@ -217,7 +217,7 @@ export const GET = auth(async function GET(req: any) {
               message: "You are not authenticated",
               error: "UNAUTHORIZED",
             },
-            { status: 401 }
+            { status: 401 },
           );
         }
 
@@ -229,7 +229,7 @@ export const GET = auth(async function GET(req: any) {
         ) {
           return NextResponse.json(
             { success: false, message: "Not authorized" },
-            { status: 403 }
+            { status: 403 },
           );
         }
       }
@@ -245,7 +245,7 @@ export const GET = auth(async function GET(req: any) {
               message: "You are not authenticated",
               error: "UNAUTHORIZED",
             },
-            { status: 401 }
+            { status: 401 },
           );
         }
       }
@@ -253,7 +253,7 @@ export const GET = auth(async function GET(req: any) {
   } catch (err) {
     return NextResponse.json(
       { success: false, message: "Internal Server Error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 });
