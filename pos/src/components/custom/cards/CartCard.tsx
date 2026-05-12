@@ -375,9 +375,7 @@ const CartCard = () => {
     const revItems = await getReverseExportFormat();
     const companyMetaCli = await getBusinessMeta();
     const allBranchesCli = await getBranchesMeta();
-    const branchDetails = allBranchesCli.find(
-      (i) => i.branch === session?.user.branch,
-    );
+    const branchDetails = allBranchesCli.find((i) => i.branch === branch);
 
     const dataCli = {
       baseData: {
