@@ -34,7 +34,7 @@ export const POST = auth(async function POST(req: any) {
           message: "you are not authenticated",
           error: "UNAUTHORIZED",
         },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -53,7 +53,7 @@ export const POST = auth(async function POST(req: any) {
     ) {
       return NextResponse.json(
         { success: false, message: "Not authorized" },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
@@ -83,19 +83,19 @@ export const POST = auth(async function POST(req: any) {
           success: false,
           message: "City or address or hotline already exists",
         },
-        { status: 409 }
+        { status: 409 },
       );
     }
     await prisma.branchMeta.create({ data: baseBranch });
 
     return NextResponse.json(
       { success: true, message: "Branch added successfully" },
-      { status: 201 }
+      { status: 201 },
     );
   } catch (err) {
     return NextResponse.json(
       { success: false, message: "Internal Server Error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }) as (req: Request) => Promise<Response>;
@@ -113,7 +113,7 @@ export const GET = async function GET(req: NextRequest) {
         message: "Branches retrieved successfully!",
         data: data,
       },
-      { status: 200 }
+      { status: 200 },
     );
   } catch (e) {
     return NextResponse.json(
@@ -122,7 +122,7 @@ export const GET = async function GET(req: NextRequest) {
         message: "An error occurred while processing your request",
         error: e instanceof Error ? e.message : String(e),
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 };
