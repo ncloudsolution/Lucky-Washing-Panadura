@@ -440,6 +440,7 @@ const Expenses = () => {
 
         <div className="flex font-semibold text-muted-foreground mb-2 px-4 justify-between gap-5">
           <div className="flex-1">Category</div>
+          <div className="flex-1 text-center">Branch</div>
           <div className="flex-1 text-center">Amount</div>
           <div className="flex-1 text-center">Payment Mode</div>
           <div className="flex-1">CreatedAt</div>
@@ -485,6 +486,7 @@ const Expenses = () => {
                       </>
                       {ex.category}
                     </div>
+                    <div className="flex-1 text-center">{ex.branch}</div>
                     <div className="flex-1 text-center">
                       {" "}
                       {new Intl.NumberFormat("en-US", {

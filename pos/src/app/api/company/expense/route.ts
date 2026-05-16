@@ -106,13 +106,14 @@ export const GET = auth(async function GET(req: any) {
   }
 
   const authRole = req.auth?.user?.role?.toLowerCase() as T_Role;
+  const authBranch = req.auth?.user?.branch;
 
   // const authRole = "system" as T_Role;
 
   if (
     !hasPermission({
       userRole: authRole,
-      permission: "create:categories",
+      permission: "create:order",
       // resourceBranch,
       // userBranch: authBranch,
     })
@@ -135,6 +136,9 @@ export const GET = auth(async function GET(req: any) {
     const expenseMetas = await prisma.expense.findMany({
       where: {
         createdAt: getNewDateRange(dateRange),
+        ...(authRole === "manager" || authRole === "uniter"
+          ? { branch: authBranch }
+          : {}),
       },
       orderBy: {
         createdAt: "desc",

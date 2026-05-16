@@ -81,9 +81,19 @@ const AllOrders = () => {
   const [odStatus, setOdStatus] = useState("All");
   const { data: session } = useSession();
   const role = session?.user.role.toLowerCase();
-  const counterNo = session?.user?.counter ? `${session.user.counter}-` : "01-";
-  const [query, setQuery] = useState(counterNo);
+  // const counterNo = session?.user?.counter ? `${session.user.counter}-` : "01-";
+  const [query, setQuery] = useState("01-");
   const [open, setOpen] = useState(false);
+
+  React.useEffect(() => {
+    const loadCounter = async () => {
+      const client = await cachedb.client.get(clientPrimaryKey);
+      const counterId = client?.counterId ? `${client.counterId}-` : "01-";
+      setQuery(counterId);
+    };
+
+    loadCounter();
+  }, []);
 
   const debouncedQuery = useDebounce(query.replace(/-/g, ""));
   const disableDefaultFilters = debouncedQuery.length > 2;

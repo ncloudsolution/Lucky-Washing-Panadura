@@ -8,7 +8,7 @@ export const ROLE_PERMISSIONS = {
     "view:staff",
     "edit:staff",
     "delete:staff",
-    // "create:order",
+    "create:order",
     "view:orders",
     "view:stock",
     "edit:orders",
@@ -74,9 +74,8 @@ export const ROLE_PERMISSIONS = {
 } as const;
 
 export type T_Role = keyof typeof ROLE_PERMISSIONS;
-type ExtractPermissions<T> = T[keyof T] extends ReadonlyArray<infer U>
-  ? U
-  : never;
+type ExtractPermissions<T> =
+  T[keyof T] extends ReadonlyArray<infer U> ? U : never;
 export type T_Permission = ExtractPermissions<typeof ROLE_PERMISSIONS>;
 
 export function hasPermission({
@@ -98,7 +97,7 @@ export function hasPermission({
   const hasBasicPermission = allowed.some(
     (p) =>
       p === permission ||
-      p.startsWith(permission.split(":").slice(0, 2).join(":"))
+      p.startsWith(permission.split(":").slice(0, 2).join(":")),
   );
 
   if (!hasBasicPermission) return false;
