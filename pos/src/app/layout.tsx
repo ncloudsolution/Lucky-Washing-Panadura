@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import {
-  Abhaya_Libre,
+  // Abhaya_Libre,
   Geist,
   Geist_Mono,
-  Noto_Sans_Sinhala,
+  // Noto_Sans_Sinhala,
   Saira,
 } from "next/font/google";
 import "./globals.css";
@@ -30,17 +30,17 @@ const saira = Saira({
   subsets: ["latin"],
 });
 
-const abhaya = Abhaya_Libre({
-  variable: "--font-abhaya",
-  weight: ["400", "500", "600", "700", "800"],
-  subsets: ["latin", "sinhala"],
-});
+// const abhaya = Abhaya_Libre({
+//   variable: "--font-abhaya",
+//   weight: ["400", "500", "600", "700", "800"],
+//   subsets: ["latin", "sinhala"],
+// });
 
-const sinhalaNato = Noto_Sans_Sinhala({
-  variable: "--font-sinhalaNato",
-  weight: ["400", "500", "600", "700", "800"],
-  subsets: ["latin", "sinhala"],
-});
+// const sinhalaNato = Noto_Sans_Sinhala({
+//   variable: "--font-sinhalaNato",
+//   weight: ["400", "500", "600", "700", "800"],
+//   subsets: ["latin", "sinhala"],
+// });
 
 export const metadata: Metadata = {
   title: {
@@ -92,7 +92,7 @@ export default function RootLayout({
     <Providers>
       <html lang="en" id="root">
         <body
-          className={`${geistSans.variable} ${geistMono.variable} ${saira.variable} ${abhaya.variable} ${sinhalaNato.variable} antialiased`}
+          className={`${geistSans.variable} ${geistMono.variable} ${saira.variable} antialiased`}
         >
           <Toaster
             expand

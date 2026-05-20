@@ -514,7 +514,7 @@ export const GET = auth(async function GET(req: any) {
           createdAt: getNewDateRange(dateRange),
           ...(authRole === "cashier"
             ? { operator: authId }
-            : authRole === "manager"
+            : authRole === "manager" || authRole === "uniter"
               ? { branch: authBranch }
               : {}),
         },
@@ -588,7 +588,7 @@ export const GET = auth(async function GET(req: any) {
 
           ...(authRole === "cashier"
             ? { operator: authId }
-            : authRole === "manager"
+            : authRole === "manager" || authRole === "uniter"
               ? { branch: authBranch }
               : {}),
         },

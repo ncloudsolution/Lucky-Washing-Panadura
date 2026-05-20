@@ -38,7 +38,7 @@ const FormCustomer = ({
   const formMethods = useForm<FormFields>({
     resolver: zodResolver(CustomerSchema),
     defaultValues: {
-      name: data?.name ?? "",
+      name: data?.name ?? "New Customer",
       mobile: data?.mobile ?? "",
     },
     mode: "onSubmit",
@@ -112,7 +112,7 @@ const FormCustomer = ({
           const newArray = oldArray.map((i) =>
             i.mobile !== data?.mobile
               ? i
-              : { ...i, mobile: formValues.mobile, name: formValues.name }
+              : { ...i, mobile: formValues.mobile, name: formValues.name },
           );
 
           return {
@@ -148,13 +148,13 @@ const FormCustomer = ({
       <Form {...formMethods}>
         <form onSubmit={handleSubmit(onSubmit)}>
           <div className="flex flex-col gap-2 w-full pt-2 pb-4">
-            <TextInput
+            {/* <TextInput
               placeholder="A.B Perera"
               labelName="Name"
               fieldName="name"
               control={control}
               hasError={!!errors.name}
-            />
+            /> */}
 
             <TextInput
               type="mobile"

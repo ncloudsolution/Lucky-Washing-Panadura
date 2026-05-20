@@ -10,6 +10,8 @@ import { TipWrapper } from "@/components/custom/wrapper/TipWrapper";
 import { FieldLabel } from "@/components/ui/field";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
+  cachedb,
+  clientPrimaryKey,
   ensureClientInit,
   getBusinessMeta,
   saveCategory,
@@ -42,12 +44,22 @@ const Income = () => {
   const [paymentType, setPaymentType] = useState("All");
   const { data: session, status } = useSession();
   const role = session?.user.role.toLowerCase();
-  const counterNo = session?.user?.counter ? `${session.user.counter}-` : "01-";
-  const [query, setQuery] = useState(counterNo);
+  // const counterNo = session?.user?.counter ? `${session.user.counter}-` : "01-";
+  const [query, setQuery] = useState("01-");
   const [open, setOpen] = useState(false);
 
   const debouncedQuery = useDebounce(query.replace(/-/g, ""));
   const disableDefaultFilters = debouncedQuery.length > 2;
+
+  React.useEffect(() => {
+    const loadCounter = async () => {
+      const client = await cachedb.client.get(clientPrimaryKey);
+      const counterId = client?.counterId ? `${client.counterId}-` : "01-";
+      setQuery(counterId);
+    };
+
+    loadCounter();
+  }, []);
 
   const {
     data: expenses,
@@ -61,7 +73,8 @@ const Income = () => {
         method: "GET",
         endpoint: `/api/company/income?from=${dates?.from}&to=${dates?.to}`,
       }),
-    select: (response) => response?.data as (IIncome & { invoiceId: string })[],
+    select: (response) =>
+      response?.data as (IIncome & { invoiceId: string; branch: string })[],
     staleTime: 1000 * 60 * 5,
   });
 
@@ -72,7 +85,8 @@ const Income = () => {
         method: "GET",
         endpoint: `/api/company/income?debounce=${debouncedQuery}`,
       }),
-    select: (response) => response?.data as (IIncome & { invoiceId: string })[],
+    select: (response) =>
+      response?.data as (IIncome & { invoiceId: string; branch: string })[],
     staleTime: 1000 * 60 * 5,
     enabled: disableDefaultFilters, // Only fetch when 'search' is truthy
   });
@@ -470,6 +484,7 @@ const Income = () => {
 
         <div className="flex font-semibold text-muted-foreground mb-2 px-4 justify-between gap-5">
           <div className="flex-1">Invoice Id</div>
+          <div className="flex-1 text-center">Branch</div>
           <div className="flex-1 text-center">Payment Type</div>
           <div className="flex-1 text-center">Payment Mode</div>
           <div className="flex-1 text-center">Amount</div>
@@ -501,6 +516,7 @@ const Income = () => {
                     <div className="flex flex-1 font-medium">
                       {counterId}-{invoiceIdOnly}
                     </div>
+                    <div className="flex-1 text-center">{ex.branch}</div>
                     <div className="flex-1 text-center">{ex.category}</div>
                     <div className="flex-1 text-center">{ex.paymentMethod}</div>
                     <div className="flex-1 text-center">

@@ -153,7 +153,8 @@ export const GET = auth(async function GET(req: any) {
   }
 
   const authRole = req.auth?.user?.role?.toLowerCase() as T_Role;
-
+  const authBranch = req.auth?.user?.branch;
+  console.log(authBranch);
   // const authRole = "system" as T_Role;
 
   if (
@@ -180,6 +181,9 @@ export const GET = auth(async function GET(req: any) {
                 startsWith: invoiceIdParam,
                 mode: "insensitive", // optional (case-insensitive)
               },
+              ...(authRole === "manager" || authRole === "uniter"
+                ? { branch: authBranch }
+                : {}),
             },
           },
         },
@@ -190,6 +194,7 @@ export const GET = auth(async function GET(req: any) {
           order: {
             select: {
               invoiceId: true,
+              branch: true,
             },
           },
         },
@@ -204,6 +209,7 @@ export const GET = auth(async function GET(req: any) {
         paymentMethod: i.paymentMethod,
         createdAt: i.createdAt,
         invoiceId: i.order?.invoiceId ?? null,
+        branch: i.order?.branch,
       }));
 
       return NextResponse.json(
@@ -227,7 +233,13 @@ export const GET = auth(async function GET(req: any) {
     const incomeMetas = await prisma.income.findMany({
       where: {
         createdAt: getNewDateRange(dateRange),
+        order: {
+          ...(authRole === "manager" || authRole === "uniter"
+            ? { branch: authBranch }
+            : {}),
+        },
       },
+
       orderBy: {
         createdAt: "desc",
       },
@@ -235,6 +247,7 @@ export const GET = auth(async function GET(req: any) {
         order: {
           select: {
             invoiceId: true,
+            branch: true,
           },
         },
       },
@@ -249,6 +262,7 @@ export const GET = auth(async function GET(req: any) {
       paymentMethod: i.paymentMethod,
       createdAt: i.createdAt,
       invoiceId: i.order?.invoiceId ?? null,
+      branch: i.order?.branch,
     }));
 
     return NextResponse.json(
