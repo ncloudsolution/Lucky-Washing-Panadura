@@ -126,14 +126,14 @@ const InvoiceSection = () => {
         </TipWrapper>
       )}
 
-      <TipWrapper triggerText="Print">
+      {/* <TipWrapper triggerText="Print">
         <Button
           className="size-10 rounded-sm xs:text-base text-xs absolute right-5 bottom-5"
           onClick={handlePrint}
         >
           <Printer className="xs:size-[18px] size-[14px]" />
         </Button>
-      </TipWrapper>
+      </TipWrapper> */}
 
       <div className="relative">
         <div className="z-20 absolute right-5 top-5 rounded-full size-[20px] bg-superbase shadow-md" />

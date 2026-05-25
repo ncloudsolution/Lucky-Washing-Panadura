@@ -14,7 +14,6 @@ import { Plus } from "lucide-react";
 import ComplexPriceInput from "../inputs/ComplexPriceInput";
 import { ToggleInput } from "../inputs/ToogleInput";
 import ComplexVariations from "../inputs/ComplexVariations";
-import { DevTool } from "@hookform/devtools";
 import { HorizontalMultiSelectInput } from "../inputs/HorizontalMultiSelectInput";
 import { MetricTypes, productMedia, TMetric } from "@/data";
 import { ProductCoreSchema } from "@/utils/validations/product";
@@ -180,7 +179,7 @@ const FormCoreProduct = () => {
       if (data.images) {
         uploadedImageUrl = await singleImageSubmission(
           data.images as File,
-          "products"
+          "products",
         );
 
         modifiedData = { ...data, images: uploadedImageUrl };
