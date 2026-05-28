@@ -119,7 +119,7 @@ export function SelectProductDialog({
 
       <Dialog open={isOpen} onOpenChange={handleCloseDialog}>
         <DialogContent
-          className="min-w-5xl max-h-[90vh] overflow-y-auto gap-4"
+          className="min-w-7xl max-h-[90vh] overflow-y-auto gap-4"
           autoFocus={false}
         >
           <DialogTitle className="leading-[20px]">{data?.name}</DialogTitle>
@@ -135,7 +135,7 @@ export function SelectProductDialog({
               </div>
 
               <div className="flex-1 flex flex-col">
-                <div className="grid grid-cols-5 gap-2 mb-4">
+                <div className="grid grid-cols-7 gap-2 mb-4">
                   {data?.varients?.map((item: any, index: number) => (
                     <div
                       key={item.id || index}
