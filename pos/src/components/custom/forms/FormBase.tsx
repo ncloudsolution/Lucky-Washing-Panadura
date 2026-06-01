@@ -23,11 +23,12 @@ import {
 import { deleteSingleImage } from "@/firebase/helpers";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ICacheProduct } from "@/app/(screens)/core/pos/page";
-import { singlishToUnicode } from "sinhala-unicode-coverter";
+
 import SelectInput from "../inputs/SelectInput";
 import { Button } from "@/components/ui/button";
 import { LoaderBtn } from "../buttons/LoaderBtn";
 import { isEqual } from "lodash";
+import { singlishToUnicode } from "@/utils/common/translation";
 
 const FormBase = ({ data }: { data: ICacheProduct }) => {
   const closeRef = React.useRef<HTMLButtonElement | null>(null);
@@ -221,7 +222,7 @@ const FormBase = ({ data }: { data: ICacheProduct }) => {
           });
 
           return newArray;
-        }
+        },
       );
 
       closeRef.current?.click();

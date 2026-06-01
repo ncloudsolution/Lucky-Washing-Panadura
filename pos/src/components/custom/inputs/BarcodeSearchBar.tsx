@@ -12,12 +12,13 @@ import {
 } from "@/data/dbcache";
 import { playMusic } from "@/utils/common";
 import { ICacheProduct } from "@/app/(screens)/core/pos/page";
-import { singlishToUnicode } from "sinhala-unicode-coverter";
+
 import ViewAccessChecker from "../other/AccessChecker";
 import { AddNewDialog } from "../dialogs/AddNewDialog";
 import FormTemporary from "../forms/FormTemporary";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSession } from "next-auth/react";
+import { singlishToUnicode } from "@/utils/common/translation";
 
 const BarcodeSearchBar = ({
   onSearch,
@@ -94,7 +95,7 @@ const BarcodeSearchBar = ({
 
     if (isBarcode && !searchOnly) {
       const product = await getCacheProductWithVariantsByBarcode(
-        inputRef.current?.value
+        inputRef.current?.value,
       );
 
       if (!product) {
@@ -118,7 +119,7 @@ const BarcodeSearchBar = ({
     if (!prod) return onSearch?.([]);
 
     const filteredProduct = products.filter(
-      (pro: ICacheProduct) => pro.id === prod.id
+      (pro: ICacheProduct) => pro.id === prod.id,
     );
 
     return onSearch?.(filteredProduct);

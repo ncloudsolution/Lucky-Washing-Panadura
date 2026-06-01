@@ -29,8 +29,9 @@ import {
 import { singleImageSubmission, deleteSingleImage } from "@/firebase/helpers";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ICacheProduct } from "@/app/(screens)/core/pos/page";
-import { singlishToUnicode } from "sinhala-unicode-coverter";
+
 import SelectInput from "../inputs/SelectInput";
+import { singlishToUnicode } from "@/utils/common/translation";
 
 export interface IProductCore {
   complex: boolean;

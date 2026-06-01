@@ -30,9 +30,9 @@ import {
 import { singleImageSubmission, deleteSingleImage } from "@/firebase/helpers";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ICacheProduct } from "@/app/(screens)/core/pos/page";
-import { singlishToUnicode } from "sinhala-unicode-coverter";
 import SelectInput from "../inputs/SelectInput";
 import { IProductVariant } from "./FormProductPrice";
+import { singlishToUnicode } from "@/utils/common/translation";
 
 // export interface IProductCore {
 //   complex: boolean;
@@ -55,7 +55,7 @@ const FormTempMaxTransfer = ({ data }: { data: IProductVariant }) => {
   type FormFields = z.infer<typeof ProductCoreSchema>;
 
   function transformToKeyValue(
-    variation: { key: string; value: string }[] | Record<string, string> | null
+    variation: { key: string; value: string }[] | Record<string, string> | null,
   ): { key: string; value: string }[] {
     if (!variation) return [];
 
@@ -194,7 +194,7 @@ const FormTempMaxTransfer = ({ data }: { data: IProductVariant }) => {
       if (data.images) {
         uploadedImageUrl = await singleImageSubmission(
           data.images as File,
-          "products"
+          "products",
         );
 
         modifiedData = { ...data, images: uploadedImageUrl };
