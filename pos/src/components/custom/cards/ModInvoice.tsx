@@ -8,8 +8,8 @@ import {
   TPaymentMethod,
 } from "@/data";
 import { formatDate } from "@/utils/common";
+import { singlishToUnicode } from "@/utils/common/translation";
 import React from "react";
-import { singlishToUnicode } from "sinhala-unicode-coverter";
 
 export interface IInvoice {
   baseData: {

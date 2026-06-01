@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { X } from "lucide-react";
-import { singlishToUnicode } from "sinhala-unicode-coverter";
+import { singlishToUnicode } from "@/utils/common/translation";
 
 const ComplexVariations = ({
   fields,
@@ -33,7 +33,7 @@ const ComplexVariations = ({
         init[f.id] = f.value ?? ""; // ❌ use existing value if editing
       });
       return init;
-    }
+    },
   );
 
   return (
@@ -51,7 +51,7 @@ const ComplexVariations = ({
               name={`variation.${index}.value`}
               render={({ field: rhfField }) => {
                 const handleChange = (
-                  e: React.ChangeEvent<HTMLInputElement>
+                  e: React.ChangeEvent<HTMLInputElement>,
                 ) => {
                   const val = e.target.value;
                   setRawValues((prev) => ({ ...prev, [field.id]: val }));
@@ -59,7 +59,7 @@ const ComplexVariations = ({
                 };
 
                 const handleKeyDown = (
-                  e: React.KeyboardEvent<HTMLInputElement>
+                  e: React.KeyboardEvent<HTMLInputElement>,
                 ) => {
                   if (!sinhalaMode) return;
 
@@ -88,7 +88,7 @@ const ComplexVariations = ({
                 };
 
                 const handleBeforeInput = (
-                  e: React.FormEvent<HTMLInputElement>
+                  e: React.FormEvent<HTMLInputElement>,
                 ) => {
                   if (sinhalaMode) {
                     const inputEvent = e.nativeEvent as InputEvent;
