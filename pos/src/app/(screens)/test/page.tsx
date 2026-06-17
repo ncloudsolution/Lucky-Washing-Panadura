@@ -1,6 +1,8 @@
+"use client";
 import NewInvoice from "@/components/custom/cards/NewInvoice";
 import { SkeletonPieChart } from "@/components/custom/charts/ChartPieLabel";
 import { TestChart } from "@/components/custom/charts/TestChart";
+import { AddNewDialog } from "@/components/custom/dialogs/AddNewDialog";
 import FormTemporary from "@/components/custom/forms/FormTemporary";
 import InvoiceSkeleton from "@/components/custom/skeleton/InvoiceSkeleton";
 import SuperCenterWrapper from "@/components/custom/wrapper/SuperCenterWrapper";
@@ -66,7 +68,13 @@ const data = {
 };
 
 const Test = () => {
-  return <InvoiceSkeleton title="Page Processing..." />;
+  return (
+    <AddNewDialog
+      form={<FormTemporary barcode="xx" />}
+      triggerText="Add Tempotaty Product"
+      triggerBtn={<div className="show">trig</div>}
+    />
+  );
 };
 
 export default Test;

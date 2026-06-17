@@ -698,59 +698,71 @@ export const OrderUI = ({
                         <span>{time}</span>
                       </div>
                       <div className="flex gap-3 justify-end h-[30px]">
-                        <CustomDialog
-                          loading={dialogLoading}
-                          title="Edit Order Confirmation"
-                          description={`This action will replace your current cart with the Invoice No ${or.invoiceId}. Any items currently in the cart will be removed and replaced by this order.`}
-                          specialText={`Are you sure you want to continue?`}
-                          triggerBtn={
-                            <Button className="size-[30px]" variant={"ghost"}>
-                              <Pencil size={16} className="text-[16px]" />
-                            </Button>
-                          }
-                          finalFireBtn={
-                            <Button
-                              className="bg-black text-white flex items-center justify-center w-fit rounded-sm gap-2"
-                              onClick={async () => {
-                                try {
-                                  await cachedb.client.update(
-                                    clientPrimaryKey,
-                                    {
-                                      lastOrderId: String(or.id),
-                                    },
-                                  );
-
-                                  await setClientEditMode(true);
-                                  setDialogLoading(true); // show loading in dialog
-                                  const invoiceData =
-                                    await editInvoiceMutation.mutateAsync(
-                                      or.id!,
-                                    );
-                                  await editInvoice(invoiceData);
-                                  router.push(posFrontend.pos);
-                                } catch (err) {
-                                } finally {
-                                  setDialogLoading(false); // hide loading after done
-                                }
-                              }}
-                              disabled={
-                                dialogLoading || editInvoiceMutation.isPending
+                        <ViewAccessChecker
+                          key={index}
+                          permission="edit:order"
+                          userRole={role}
+                          component={
+                            <CustomDialog
+                              loading={dialogLoading}
+                              title="Edit Order Confirmation"
+                              description={`This action will replace your current cart with the Invoice No ${or.invoiceId}. Any items currently in the cart will be removed and replaced by this order.`}
+                              specialText={`Are you sure you want to continue?`}
+                              triggerBtn={
+                                <Button
+                                  className="size-[30px]"
+                                  variant={"ghost"}
+                                >
+                                  <Pencil size={16} className="text-[16px]" />
+                                </Button>
                               }
-                            >
-                              {dialogLoading ? (
-                                <LoaderBtn loadertext="Moving..." />
-                              ) : (
-                                <>
-                                  Edit
-                                  <Repeat
-                                    size={16}
-                                    className="size-[16px] text-secondary"
-                                  />
-                                </>
-                              )}
-                            </Button>
+                              finalFireBtn={
+                                <Button
+                                  className="bg-black text-white flex items-center justify-center w-fit rounded-sm gap-2"
+                                  onClick={async () => {
+                                    try {
+                                      await cachedb.client.update(
+                                        clientPrimaryKey,
+                                        {
+                                          lastOrderId: String(or.id),
+                                        },
+                                      );
+
+                                      await setClientEditMode(true);
+                                      setDialogLoading(true); // show loading in dialog
+                                      const invoiceData =
+                                        await editInvoiceMutation.mutateAsync(
+                                          or.id!,
+                                        );
+                                      await editInvoice(invoiceData);
+                                      router.push(posFrontend.pos);
+                                    } catch (err) {
+                                    } finally {
+                                      setDialogLoading(false); // hide loading after done
+                                    }
+                                  }}
+                                  disabled={
+                                    dialogLoading ||
+                                    editInvoiceMutation.isPending
+                                  }
+                                >
+                                  {dialogLoading ? (
+                                    <LoaderBtn loadertext="Moving..." />
+                                  ) : (
+                                    <>
+                                      Edit
+                                      <Repeat
+                                        size={16}
+                                        className="size-[16px] text-secondary"
+                                      />
+                                    </>
+                                  )}
+                                </Button>
+                              }
+                            />
                           }
                         />
+
                         <OrderSheet id={or.id!} />
                         {/* <div className="w-[30px]" /> */}
                         {/* <div className="w-[30px]" /> */}
