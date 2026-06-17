@@ -267,12 +267,13 @@ export const PUT = auth(async function PUT(req: any) {
     }
 
     const authRole = req.auth?.user?.role?.toLowerCase() as T_Role;
+    console.log(authRole);
     const authId = req.auth?.user?.id;
 
     if (
       !hasPermission({
         userRole: authRole,
-        permission: "edit:orders:own-only",
+        permission: "edit:order",
         // resourceBranch,
         // userBranch: authBranch,
       })
@@ -283,18 +284,20 @@ export const PUT = auth(async function PUT(req: any) {
       );
     }
 
+    console.log("hi");
+
     const currentOrder = await prisma.orderMeta.findFirst({
       where: {
         id: orderId,
       },
     });
 
-    if (currentOrder?.operator !== authId) {
-      return NextResponse.json(
-        { success: false, message: "Not authorized" },
-        { status: 403 },
-      );
-    }
+    // if (currentOrder?.operator !== authId) {
+    //   return NextResponse.json(
+    //     { success: false, message: "Not authorized" },
+    //     { status: 403 },
+    //   );
+    // }
 
     const customerMeta = await prisma.customerMeta.findFirst({
       where: { mobile: data.customerMobile },

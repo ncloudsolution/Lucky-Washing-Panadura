@@ -6,6 +6,7 @@ import { NextResponse } from "next/server";
 export const GET = auth(async function GET(req: any) {
   const { searchParams } = new URL(req.url);
   const operator = searchParams.get("operator");
+  console.log(operator);
 
   const authRole = req.auth?.user?.role?.toLowerCase() as T_Role;
 
@@ -19,22 +20,22 @@ export const GET = auth(async function GET(req: any) {
         message: "You are not authenticated",
         error: "UNAUTHORIZED",
       },
-      { status: 401 }
+      { status: 401 },
     );
   }
 
-  if (
-    !hasPermission({
-      userRole: authRole,
-      permission: "create:order",
-    })
-  ) {
-    return NextResponse.json(
-      { success: false, message: "Not authorized" },
-      { status: 403 }
-    );
-  }
-
+  // if (
+  //   !hasPermission({
+  //     userRole: authRole,
+  //     permission: "create:order",
+  //   })
+  // ) {
+  //   return NextResponse.json(
+  //     { success: false, message: "Not authorized" },
+  //     { status: 403 }
+  //   );
+  // }
+  console.log("hi");
   if (!operator) {
     return NextResponse.json(
       {
@@ -43,7 +44,7 @@ export const GET = auth(async function GET(req: any) {
         data: null,
         error: "INVALID OPERATION",
       },
-      { status: 400 }
+      { status: 400 },
     );
   }
   try {
@@ -57,17 +58,19 @@ export const GET = auth(async function GET(req: any) {
       orderBy: { createdAt: "desc" },
     });
 
+    console.log("hello");
     if (!lastOrder) {
+      console.log("hello");
       return NextResponse.json(
         {
           success: true,
           message: "Invoice suffix retrieved successfully!",
           data: "0",
         },
-        { status: 200 }
+        { status: 200 },
       );
     }
-
+    console.log("hello");
     const lastId = lastOrder?.invoiceId.slice(2);
     const nextId = Number(lastId) + 1;
     return NextResponse.json(
@@ -76,7 +79,7 @@ export const GET = auth(async function GET(req: any) {
         message: "Invoice suffix retrieved successfully!",
         data: nextId.toString(),
       },
-      { status: 200 }
+      { status: 200 },
     );
   } catch (e) {
     return NextResponse.json(
@@ -85,7 +88,7 @@ export const GET = auth(async function GET(req: any) {
         message: "An error occurred while processing your request",
         error: e instanceof Error ? e.message : String(e),
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 });
