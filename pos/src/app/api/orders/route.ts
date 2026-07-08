@@ -581,12 +581,32 @@ export const GET = auth(async function GET(req: any) {
 
       const debounce = searchParams.get("debounce");
 
+      console.log(debounce);
+
       const orderMetas = await prisma.orderMeta.findMany({
         where: {
+          // ...(debounce && {
+          //   invoiceId: {
+          //     startsWith: debounce,
+          //   },
+
+          // }),
           ...(debounce && {
-            invoiceId: {
-              startsWith: debounce,
-            },
+            OR: [
+              {
+                invoiceId: {
+                  contains: debounce,
+                  mode: "insensitive",
+                },
+              },
+              {
+                customer: {
+                  mobile: {
+                    contains: debounce,
+                  },
+                },
+              },
+            ],
           }),
 
           ...(authRole === "cashier"
@@ -606,7 +626,7 @@ export const GET = auth(async function GET(req: any) {
           },
         },
       });
-
+      console.log(orderMetas);
       const ordersWithIncomeSum = orderMetas.map((order) => {
         const totalIncome = order.incomes.reduce(
           (sum, inc) => sum + Number(inc.amount),
@@ -618,6 +638,8 @@ export const GET = auth(async function GET(req: any) {
           paymentAmount: totalIncome,
         };
       });
+
+      console.log(ordersWithIncomeSum);
 
       return NextResponse.json(
         {
