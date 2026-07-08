@@ -33,11 +33,7 @@ export function DatePickerWithRange({
     <Field
       className={`mx-auto w-full ${label && "gap-1.5"}  ${isLoading && "cursor-not-allowed"}`}
     >
-      {label && (
-        <FieldLabel htmlFor="date-picker-range">
-          Search By Date Range
-        </FieldLabel>
-      )}
+      {label && <FieldLabel htmlFor="date-picker-range">Date Range</FieldLabel>}
       <Popover>
         <PopoverTrigger asChild>
           <Button

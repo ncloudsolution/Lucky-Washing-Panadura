@@ -388,7 +388,7 @@ const AllOrders = () => {
   return (
     <div className="flex flex-col h-full w-full min-w-7xl text-sm overflow-x-auto no-scrollbar">
       <div className="w-full flex justify-between">
-        <div className="flex w-fit gap-8 mb-5 items-end">
+        <div className="flex w-fit gap-4 mb-5 items-end">
           <DatePickerWithRange
             date={dates}
             setDate={setDates}
@@ -396,9 +396,7 @@ const AllOrders = () => {
           />
 
           <div className="flex w-full flex-col gap-1.5">
-            <FieldLabel htmlFor="date-picker-range">
-              Search By Payment Status
-            </FieldLabel>
+            <FieldLabel htmlFor="date-picker-range">Payment Status</FieldLabel>
 
             <SelectOnSearch
               isLoading={
@@ -415,9 +413,7 @@ const AllOrders = () => {
           </div>
 
           <div className="flex w-full flex-col gap-1.5">
-            <FieldLabel htmlFor="date-picker-range">
-              Search By Order Status
-            </FieldLabel>
+            <FieldLabel htmlFor="date-picker-range">Order Status</FieldLabel>
 
             <SelectOnSearch
               isLoading={
@@ -433,9 +429,9 @@ const AllOrders = () => {
             />
           </div>
 
-          <div className="flex w-full flex-col gap-1.5">
+          <div className="flex flex-col w-full gap-1.5">
             <FieldLabel htmlFor="date-picker-range">
-              Search By Invoice No
+              Invoice / mobile
             </FieldLabel>
             <Input
               value={query}

@@ -19,24 +19,24 @@ export const POST = async (req: NextRequest) => {
     if (response.data.status === "success") {
       return NextResponse.json(
         { message: "Message sent successfully", data: response.data },
-        { status: 200 }
+        { status: 200 },
       );
     }
 
     return NextResponse.json(
       { message: "Request failed", data: response.data },
-      { status: 400 }
+      { status: 400 },
     );
   } catch (error) {
     if (error instanceof AxiosError) {
       return NextResponse.json(
         { message: error.response?.data || "Something went wrong" },
-        { status: 500 }
+        { status: 500 },
       );
     } else {
       return NextResponse.json(
         { message: `Unexpected error: ${error}` },
-        { status: 500 }
+        { status: 500 },
       );
     }
   }
