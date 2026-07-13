@@ -11,10 +11,15 @@ const SignOutBtn = ({ callbackPath }: { callbackPath: string }) => {
   const [loading, setLoading] = useState(false);
   const handleClick = async () => {
     setLoading(true);
+    //check queue
+    const values = await cachedb.queue.toArray();
+    if (values.length > 0) {
+      setLoading(false);
+      return toast.error("Cannot logout untill queue is free");
+    }
+
     await cachedb.delete();
-
     await signOut({ callbackUrl: callbackPath });
-
     await new Promise((resolve) => setTimeout(resolve, 500)); // 1/2 second delay
     setLoading(false);
 

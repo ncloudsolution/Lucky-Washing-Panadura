@@ -235,6 +235,7 @@ export const POST = auth(async function POST(req: any) {
       { status: 201 },
     );
   } catch (err) {
+    console.error("ORDER ERROR:", err);
     return NextResponse.json(
       {
         success: false,
