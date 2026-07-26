@@ -17,7 +17,7 @@ import {
   saveCategory,
 } from "@/data/dbcache";
 import { BasicDataFetch, formatDate } from "@/utils/common";
-import { Coins, NotepadText, TextAlignJustify } from "lucide-react";
+import { Building2, Coins, NotepadText, TextAlignJustify } from "lucide-react";
 import React, { useState } from "react";
 import { DateRange } from "react-day-picker";
 import { toast } from "sonner";
@@ -42,6 +42,7 @@ const Income = () => {
 
   const [paymentmode, setPaymentMode] = useState("All");
   const [paymentType, setPaymentType] = useState("All");
+  const [branch, setBranch] = useState("All");
   const { data: session, status } = useSession();
   const role = session?.user.role.toLowerCase();
   // const counterNo = session?.user?.counter ? `${session.user.counter}-` : "01-";
@@ -104,12 +105,15 @@ const Income = () => {
       const paymentModeMatch =
         paymentmode === "All" || paymentmode === i.paymentMethod;
 
-      return categoryMatch && paymentModeMatch;
+      const branchMatch = branch === "All" || branch === i.branch;
+
+      return categoryMatch && paymentModeMatch && branchMatch;
     });
   }, [
     expenses,
     paymentType,
     paymentmode,
+    branch,
     incomeMetasDebounce,
     disableDefaultFilters,
   ]);
@@ -339,6 +343,23 @@ const Income = () => {
                 isLoading || disableDefaultFilters || isLoadingDebounce
               }
             />
+
+            <div className="flex w-full flex-col gap-1.5">
+              <FieldLabel htmlFor="date-picker-range">Branch</FieldLabel>
+
+              <SelectOnSearch
+                isLoading={
+                  isLoading || isLoadingDebounce || disableDefaultFilters
+                }
+                icon={<Building2 className="text-white" size={18} />}
+                selections={["All", "Eluwila", "Panadura"]}
+                value={branch}
+                onValueChange={(value) => {
+                  setBranch(value);
+                  // setSearch("");
+                }}
+              />
+            </div>
 
             <div className="flex min-w-[200px] flex-col gap-1.5">
               <FieldLabel htmlFor="date-picker-range">
