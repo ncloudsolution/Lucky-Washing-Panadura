@@ -35,6 +35,7 @@ import { format } from "date-fns";
 import { set } from "lodash";
 import {
   BadgeCheck,
+  Building2,
   Check,
   CheckCheck,
   CircleCheck,
@@ -78,6 +79,7 @@ const AllOrders = () => {
   );
   console.log(dates);
   const [paymentStatus, setPaymentStatus] = useState("All");
+  const [branch, setBranch] = useState("All");
   const [odStatus, setOdStatus] = useState("All");
   const { data: session } = useSession();
   const role = session?.user.role.toLowerCase();
@@ -151,13 +153,16 @@ const AllOrders = () => {
 
       const statusMatch = odStatus === "All" || odStatus === i.status;
 
-      return paymentMatch && statusMatch;
+      const branchMatch = branch === "All" || branch === i.branch;
+
+      return paymentMatch && statusMatch && branchMatch;
     });
   }, [
     orderMetas,
     orderMetasDebounce,
     paymentStatus,
     odStatus,
+    branch,
     disableDefaultFilters,
   ]);
 
@@ -394,6 +399,23 @@ const AllOrders = () => {
             setDate={setDates}
             isLoading={isLoading || isLoadingDebounce || disableDefaultFilters}
           />
+
+          <div className="flex w-full flex-col gap-1.5">
+            <FieldLabel htmlFor="date-picker-range">Branch</FieldLabel>
+
+            <SelectOnSearch
+              isLoading={
+                isLoading || isLoadingDebounce || disableDefaultFilters
+              }
+              icon={<Building2 className="text-white" size={18} />}
+              selections={["All", "Eluwila", "Panadura"]}
+              value={branch}
+              onValueChange={(value) => {
+                setBranch(value);
+                // setSearch("");
+              }}
+            />
+          </div>
 
           <div className="flex w-full flex-col gap-1.5">
             <FieldLabel htmlFor="date-picker-range">Payment Status</FieldLabel>

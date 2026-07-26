@@ -15,7 +15,13 @@ import {
 } from "@/data/dbcache";
 import { BasicDataFetch, formatDate } from "@/utils/common";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Coins, NotepadText, Pencil, TextAlignJustify } from "lucide-react";
+import {
+  Building2,
+  Coins,
+  NotepadText,
+  Pencil,
+  TextAlignJustify,
+} from "lucide-react";
 import { useSession } from "next-auth/react";
 import React, { useState } from "react";
 import { DateRange } from "react-day-picker";
@@ -38,6 +44,7 @@ const Expenses = () => {
   const queryClient = useQueryClient();
   const [expCategory, setExpCategory] = useState("All");
   const [paymentmode, setPaymentMode] = useState("All");
+  const [branch, setBranch] = useState("All");
   const { data: session, status } = useSession();
   const role = session?.user.role.toLowerCase();
   const [open, setOpen] = useState(false);
@@ -95,9 +102,11 @@ const Expenses = () => {
       const paymentModeMatch =
         paymentmode === "All" || paymentmode === i.paymentMethod;
 
-      return categoryMatch && paymentModeMatch;
+      const branchMatch = branch === "All" || branch === i.branch;
+
+      return categoryMatch && paymentModeMatch && branchMatch;
     });
-  }, [expenses, expCategory, paymentmode]);
+  }, [expenses, expCategory, branch, paymentmode]);
   console.log(filteredExpenses);
   const handleExport = () => {
     if (filteredExpenses.length === 0) {
@@ -314,6 +323,20 @@ const Expenses = () => {
               setDate={setDates}
               isLoading={isLoading || isExpenseArray}
             />
+            <div className="flex w-full flex-col gap-1.5">
+              <FieldLabel htmlFor="date-picker-range">Branch</FieldLabel>
+
+              <SelectOnSearch
+                isLoading={isLoading || isExpenseArray}
+                icon={<Building2 className="text-white" size={18} />}
+                selections={["All", "Eluwila", "Panadura"]}
+                value={branch}
+                onValueChange={(value) => {
+                  setBranch(value);
+                  // setSearch("");
+                }}
+              />
+            </div>
 
             <div className="flex min-w-[200px] flex-col gap-1.5">
               <FieldLabel htmlFor="date-picker-range">
