@@ -266,6 +266,7 @@ const CartCard = () => {
     const operator = client?.operator;
     const branch = client?.branch;
 
+    // const finalNextInvoiceId: string = "01119";
     const finalNextInvoiceId: string =
       (counterId as string) + nextInvoiceIdSuffix;
 
