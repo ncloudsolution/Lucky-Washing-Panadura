@@ -277,13 +277,15 @@ export function OrderSheet({ id }: { id: string }) {
         <SheetFooter className="w-full flex items-end ">
           {!isLoading ? (
             <div className="flex gap-3 w-full">
-              {/* <Button
-                className="w-full rounded-sm xs:text-base text-xs"
-                onClick={handlePrint}
-              >
-                <Printer className="xs:size-[18px] size-[14px]" />
-                Print
-              </Button> */}
+              {session?.user.role === "Director" && (
+                <Button
+                  className="w-full rounded-sm xs:text-base text-xs"
+                  onClick={handlePrint}
+                >
+                  <Printer className="xs:size-[18px] size-[14px]" />
+                  Print
+                </Button>
+              )}
             </div>
           ) : (
             <Skeleton className="h-10 w-full" />

@@ -52,10 +52,11 @@ import {
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import { DateRange } from "react-day-picker";
 import { toast } from "sonner";
 import * as XLSX from "xlsx-js-style";
+import { List } from "react-window";
 
 export function getTodayRange(date: Date) {
   const from = new Date(date);
@@ -590,6 +591,31 @@ export const OrderUI = ({
   });
   const [dialogLoading, setDialogLoading] = React.useState(false);
 
+  const [isBigScroll, setIsBigScroll] = useState(false);
+  const previousScrollOffset = useRef(0);
+  const scrollTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleScroll = (event: React.UIEvent<HTMLDivElement>) => {
+    const scrollOffset = event.currentTarget.scrollTop;
+
+    const distance = Math.abs(scrollOffset - previousScrollOffset.current);
+
+    previousScrollOffset.current = scrollOffset;
+
+    // Ignore normal scrolling
+    if (distance < 500) return;
+
+    setIsBigScroll(true);
+
+    if (scrollTimeout.current) {
+      clearTimeout(scrollTimeout.current);
+    }
+
+    scrollTimeout.current = setTimeout(() => {
+      setIsBigScroll(false);
+    }, 100);
+  };
+
   return (
     <>
       <HeaderLabel />
@@ -598,10 +624,26 @@ export const OrderUI = ({
           <ListSkeleton height={60} length={10} />
         ) : orderMetas && orderMetas.length > 0 ? (
           <div className="flex flex-col h-full justify-between gap-2 ">
-            <div className="flex flex-col gap-2 flex-1">
-              {orderMetas
-                .filter(Boolean) // 🔥 removes undefined / null
-                .map((or, index) => {
+            <div className="flex flex-col gap-2 flex-1 min-h-0">
+              <List
+                rowCount={orderMetas.length}
+                rowHeight={60}
+                overscanCount={5}
+                onScroll={handleScroll}
+                rowComponent={({ index, style }) => {
+                  if (isBigScroll) {
+                    return (
+                      <div style={style} className="px-2 py-1">
+                        <div className="h-full rounded-md bg-muted animate-pulse" />
+                      </div>
+                    );
+                  }
+
+                  console.log(index);
+                  const or = orderMetas[index];
+
+                  if (!or) return null;
+
                   const createdAt = or.createdAt
                     ? new Date(or.createdAt)
                     : null;
@@ -610,25 +652,22 @@ export const OrderUI = ({
 
                   const [date, time] = formatDate(createdAt.toLocaleString());
 
-                  function DueAmount() {
-                    const x =
-                      Number(or?.saleValue ?? 0) +
-                      Number(or.deliveryfee ?? 0) -
-                      Number(or.paymentAmount ?? 0);
-
-                    return x;
-                  }
+                  const dueAmount =
+                    Number(or?.saleValue ?? 0) +
+                    Number(or.deliveryfee ?? 0) -
+                    Number(or.paymentAmount ?? 0);
 
                   const counterId = or.invoiceId.toString().slice(0, 2);
                   const invoiceIdOnly = or.invoiceId.toString().slice(2);
 
                   return (
-                    <div
-                      key={index}
-                      className={` flex justify-between items-center gap-5 py-3 px-4 group hover:bg-muted bg-background shadow rounded-md border border-transparent hover:border-gray-400`}
-                    >
-                      <div className="flex flex-1 items-center gap-2 font-medium">
-                        <>
+                    <div style={style}>
+                      <div
+                        className="flex justify-between items-center gap-5 py-3 px-4
+            group hover:bg-muted bg-background shadow rounded-md
+            border border-transparent hover:border-gray-400"
+                      >
+                        <div className="flex flex-1 items-center gap-2 font-medium">
                           <div
                             className={`${
                               or.deliveryfee ? "bg-superbase" : "bg-input"
@@ -640,154 +679,160 @@ export const OrderUI = ({
                               <Home className="size-[14px]" />
                             )}
                           </div>
-                        </>
-                        {/* {or.invoiceId} */}
-                        {counterId}-{invoiceIdOnly}
-                      </div>
-                      <div className="flex-1 text-center">{or.branch}</div>
+                          {counterId}-{invoiceIdOnly}
+                        </div>
 
-                      <ViewAccessChecker
-                        key={index}
-                        permission="create:order"
-                        userRole={role}
-                        component={
-                          <AddNewDialog
-                            width={"min-w-xl"}
-                            form={<FormStateChange data={or} dates={dates} />}
-                            triggerBtn={
-                              <div className="flex flex-1 justify-center text-center gap-2 cursor-pointer">
-                                {or.status === "Delivered" ? (
-                                  <div className="bg-superbase size-[25px] rounded-full flex justify-center items-center">
-                                    <CheckCheck
-                                      size={14}
-                                      className="text-white"
-                                    />
-                                  </div>
-                                ) : or.status === "Packed" ? (
-                                  <div className="bg-green-700 size-[25px] rounded-full flex justify-center items-center">
-                                    <Check size={14} className="text-white" />
-                                  </div>
-                                ) : or.status === "Processing" ? (
-                                  <div className="bg-yellow-500 size-[25px] rounded-full flex justify-center items-center">
-                                    <RefreshCw
-                                      size={14}
-                                      className="text-black"
-                                    />
-                                  </div>
-                                ) : (
-                                  <div className="bg-destructive size-[25px] rounded-full flex justify-center items-center">
-                                    <CircleX size={14} className="text-white" />
-                                  </div>
-                                )}
-                                {or.status}
-                              </div>
-                            }
-                            triggerText="Change Status"
-                          />
-                        }
-                        skeleton={
-                          <Skeleton className="size-[40px] rounded-sm bg-gray-300 border-slate-400" />
-                        }
-                      />
-                      <div className="flex flex-1 justify-center items-center font-medium gap-2">
-                        <>
+                        <div className="flex-1 text-center">{or.branch}</div>
+
+                        <ViewAccessChecker
+                          permission="create:order"
+                          userRole={role}
+                          component={
+                            <AddNewDialog
+                              width="min-w-xl"
+                              form={<FormStateChange data={or} dates={dates} />}
+                              triggerBtn={
+                                <div className="flex flex-1 justify-center text-center gap-2 cursor-pointer">
+                                  {or.status === "Delivered" ? (
+                                    <div className="bg-superbase size-[25px] rounded-full flex justify-center items-center">
+                                      <CheckCheck
+                                        size={14}
+                                        className="text-white"
+                                      />
+                                    </div>
+                                  ) : or.status === "Packed" ? (
+                                    <div className="bg-green-700 size-[25px] rounded-full flex justify-center items-center">
+                                      <Check size={14} className="text-white" />
+                                    </div>
+                                  ) : or.status === "Processing" ? (
+                                    <div className="bg-yellow-500 size-[25px] rounded-full flex justify-center items-center">
+                                      <RefreshCw
+                                        size={14}
+                                        className="text-black"
+                                      />
+                                    </div>
+                                  ) : (
+                                    <div className="bg-destructive size-[25px] rounded-full flex justify-center items-center">
+                                      <CircleX
+                                        size={14}
+                                        className="text-white"
+                                      />
+                                    </div>
+                                  )}
+
+                                  {or.status}
+                                </div>
+                              }
+                              triggerText="Change Status"
+                            />
+                          }
+                          skeleton={
+                            <Skeleton className="size-[40px] rounded-sm bg-gray-300 border-slate-400" />
+                          }
+                        />
+
+                        <div className="flex flex-1 justify-center items-center font-medium gap-2">
                           <div
                             className={`${
-                              DueAmount() === 0
+                              dueAmount === 0
                                 ? "bg-superbase"
                                 : "bg-destructive text-primary"
                             } size-[25px] rounded-full flex justify-center items-center text-white`}
                           >
-                            {DueAmount() === 0 ? (
+                            {dueAmount === 0 ? (
                               <BadgeCheck className="size-[14px]" />
                             ) : (
                               <Coins className="size-[14px]" />
                             )}
                           </div>
-                        </>
-                        {new Intl.NumberFormat("en-US", {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        }).format(Number(or.saleValue))}
-                      </div>
-                      {/* <div className="flex-1 text-center">{or.paymentMethod}</div> */}
-                      <div className="flex flex-1 gap-2 text-muted-foreground">
-                        <span className="font-medium">{date}</span>
-                        <span>{time}</span>
-                      </div>
-                      <div className="flex gap-3 justify-end h-[30px]">
-                        <ViewAccessChecker
-                          key={index}
-                          permission="edit:order"
-                          userRole={role}
-                          component={
-                            <CustomDialog
-                              loading={dialogLoading}
-                              title="Edit Order Confirmation"
-                              description={`This action will replace your current cart with the Invoice No ${or.invoiceId}. Any items currently in the cart will be removed and replaced by this order.`}
-                              specialText={`Are you sure you want to continue?`}
-                              triggerBtn={
-                                <Button
-                                  className="size-[30px]"
-                                  variant={"ghost"}
-                                >
-                                  <Pencil size={16} className="text-[16px]" />
-                                </Button>
-                              }
-                              finalFireBtn={
-                                <Button
-                                  className="bg-black text-white flex items-center justify-center w-fit rounded-sm gap-2"
-                                  onClick={async () => {
-                                    try {
-                                      await cachedb.client.update(
-                                        clientPrimaryKey,
-                                        {
-                                          lastOrderId: String(or.id),
-                                        },
-                                      );
 
-                                      await setClientEditMode(true);
-                                      setDialogLoading(true); // show loading in dialog
-                                      const invoiceData =
-                                        await editInvoiceMutation.mutateAsync(
-                                          or.id!,
+                          {new Intl.NumberFormat("en-US", {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          }).format(Number(or.saleValue))}
+                        </div>
+
+                        <div className="flex flex-1 gap-2 text-muted-foreground">
+                          <span className="font-medium">{date}</span>
+                          <span>{time}</span>
+                        </div>
+
+                        <div className="flex gap-3 justify-end h-[30px]">
+                          <ViewAccessChecker
+                            permission="edit:order"
+                            userRole={role}
+                            component={
+                              <CustomDialog
+                                loading={dialogLoading}
+                                title="Edit Order Confirmation"
+                                description={`This action will replace your current cart with the Invoice No ${or.invoiceId}. Any items currently in the cart will be removed and replaced by this order.`}
+                                specialText="Are you sure you want to continue?"
+                                triggerBtn={
+                                  <Button
+                                    className="size-[30px]"
+                                    variant="ghost"
+                                  >
+                                    <Pencil size={16} className="text-[16px]" />
+                                  </Button>
+                                }
+                                finalFireBtn={
+                                  <Button
+                                    className="bg-black text-white flex items-center justify-center w-fit rounded-sm gap-2"
+                                    onClick={async () => {
+                                      try {
+                                        await cachedb.client.update(
+                                          clientPrimaryKey,
+                                          {
+                                            lastOrderId: String(or.id),
+                                          },
                                         );
-                                      await editInvoice(invoiceData);
-                                      router.push(posFrontend.pos);
-                                    } catch (err) {
-                                    } finally {
-                                      setDialogLoading(false); // hide loading after done
-                                    }
-                                  }}
-                                  disabled={
-                                    dialogLoading ||
-                                    editInvoiceMutation.isPending
-                                  }
-                                >
-                                  {dialogLoading ? (
-                                    <LoaderBtn loadertext="Moving..." />
-                                  ) : (
-                                    <>
-                                      Edit
-                                      <Repeat
-                                        size={16}
-                                        className="size-[16px] text-secondary"
-                                      />
-                                    </>
-                                  )}
-                                </Button>
-                              }
-                            />
-                          }
-                        />
 
-                        <OrderSheet id={or.id!} />
-                        {/* <div className="w-[30px]" /> */}
-                        {/* <div className="w-[30px]" /> */}
+                                        await setClientEditMode(true);
+                                        setDialogLoading(true);
+
+                                        const invoiceData =
+                                          await editInvoiceMutation.mutateAsync(
+                                            or.id!,
+                                          );
+
+                                        await editInvoice(invoiceData);
+                                        router.push(posFrontend.pos);
+                                      } catch (err) {
+                                        console.error(err);
+                                      } finally {
+                                        setDialogLoading(false);
+                                      }
+                                    }}
+                                    disabled={
+                                      dialogLoading ||
+                                      editInvoiceMutation.isPending
+                                    }
+                                  >
+                                    {dialogLoading ? (
+                                      <LoaderBtn loadertext="Moving..." />
+                                    ) : (
+                                      <>
+                                        Edit
+                                        <Repeat
+                                          size={16}
+                                          className="size-[16px] text-secondary"
+                                        />
+                                      </>
+                                    )}
+                                  </Button>
+                                }
+                              />
+                            }
+                          />
+
+                          <OrderSheet id={or.id!} />
+                        </div>
                       </div>
                     </div>
                   );
-                })}
+                }}
+                rowProps={{}}
+              />
             </div>
             <div className="w-full text-center pt-0">
               --- {orderMetas.length} Records Founded ---
