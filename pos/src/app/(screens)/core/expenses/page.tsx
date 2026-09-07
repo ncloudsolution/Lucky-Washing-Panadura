@@ -32,7 +32,7 @@ import { FieldLabel } from "@/components/ui/field";
 import { TipWrapper } from "@/components/custom/wrapper/TipWrapper";
 import { ExportDialog } from "@/components/custom/dialogs/ExportDialog";
 import { format } from "date-fns";
-import { PaymentMethod, TPaymentMethod } from "@/data";
+import { PaymentMethod, staticBranches, TPaymentMethod } from "@/data";
 import TextSkeleton from "@/components/custom/skeleton/TextSkeleton";
 import * as XLSX from "xlsx-js-style";
 
@@ -329,7 +329,7 @@ const Expenses = () => {
               <SelectOnSearch
                 isLoading={isLoading || isExpenseArray}
                 icon={<Building2 className="text-white" size={18} />}
-                selections={["All", "Eluwila", "Panadura"]}
+                selections={staticBranches}
                 value={branch}
                 onValueChange={(value) => {
                   setBranch(value);

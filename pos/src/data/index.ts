@@ -16,6 +16,7 @@ export const globalDefaultCustomer = {
   mobile: "+94777777777",
 };
 
+export const staticBranches = ["All", "Eluwila", "Panadura", "Kalutara"];
 export const defaultPrint = true;
 export const productMedia = true;
 export const sinhalaBill = false;
