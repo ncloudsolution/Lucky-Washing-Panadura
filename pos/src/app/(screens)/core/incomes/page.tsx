@@ -25,7 +25,7 @@ import { getTodayRange } from "../(orders)/orders-all/page";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
 import { IExpense } from "@/components/custom/forms/FormExpense";
-import { PaymentMethod, TPaymentMethod } from "@/data";
+import { PaymentMethod, staticBranches, TPaymentMethod } from "@/data";
 import { Input } from "@/components/ui/input";
 import { useDebounce } from "@/hooks/useDebounce";
 import { IIncome } from "@/components/custom/forms/FormIncome";
@@ -352,7 +352,7 @@ const Income = () => {
                   isLoading || isLoadingDebounce || disableDefaultFilters
                 }
                 icon={<Building2 className="text-white" size={18} />}
-                selections={["All", "Eluwila", "Panadura"]}
+                selections={staticBranches}
                 value={branch}
                 onValueChange={(value) => {
                   setBranch(value);

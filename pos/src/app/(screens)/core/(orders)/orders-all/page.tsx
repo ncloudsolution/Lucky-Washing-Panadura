@@ -16,7 +16,7 @@ import { Button } from "@/components/ui/button";
 import { FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { orderStatus, PaymentMethod } from "@/data";
+import { orderStatus, PaymentMethod, staticBranches } from "@/data";
 import { IOrderMeta } from "@/data";
 import {
   cachedb,
@@ -409,7 +409,7 @@ const AllOrders = () => {
                 isLoading || isLoadingDebounce || disableDefaultFilters
               }
               icon={<Building2 className="text-white" size={18} />}
-              selections={["All", "Eluwila", "Panadura"]}
+              selections={staticBranches}
               value={branch}
               onValueChange={(value) => {
                 setBranch(value);
