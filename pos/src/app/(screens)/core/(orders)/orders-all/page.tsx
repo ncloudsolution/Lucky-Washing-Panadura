@@ -57,6 +57,12 @@ import { DateRange } from "react-day-picker";
 import { toast } from "sonner";
 import * as XLSX from "xlsx-js-style";
 import { List } from "react-window";
+import { Checkbox } from "@/components/ui/checkbox";
+
+type SelectBulkParams = {
+  invoiceId: string;
+  orderId: string;
+};
 
 export function getTodayRange(date: Date) {
   const from = new Date(date);
@@ -87,6 +93,26 @@ const AllOrders = () => {
   // const counterNo = session?.user?.counter ? `${session.user.counter}-` : "01-";
   const [query, setQuery] = useState("01-");
   const [open, setOpen] = useState(false);
+
+  const [bulkStatus, setBulkStatus] = useState<
+    { invoiceId: string; orderId: string }[]
+  >([]);
+
+  const [bulkActive, setBulkActive] = useState(false);
+
+  React.useEffect(() => {
+    if (!bulkActive) {
+      setBulkStatus([]);
+    }
+  }, [bulkActive]);
+
+  const selectBulk = ({ invoiceId, orderId }: SelectBulkParams) => {
+    setBulkStatus((prev) =>
+      prev.some((item) => item.orderId === orderId)
+        ? prev.filter((item) => item.orderId !== orderId)
+        : [...prev, { invoiceId, orderId }],
+    );
+  };
 
   React.useEffect(() => {
     const loadCounter = async () => {
@@ -543,6 +569,9 @@ const AllOrders = () => {
         role={role}
         isLoading={isLoading || isLoadingDebounce}
         orderMetas={filteredOrders ?? []}
+        bulkActive={bulkActive}
+        bulkStatus={bulkStatus}
+        selectBulk={selectBulk}
       />
     </div>
   );
@@ -573,11 +602,17 @@ export const OrderUI = ({
   orderMetas,
   role,
   dates,
+  bulkActive,
+  bulkStatus,
+  selectBulk,
 }: {
   dates: DateRange | undefined;
   role: T_Role;
   isLoading: boolean;
   orderMetas: IOrderMeta[];
+  bulkActive: boolean;
+  bulkStatus: { invoiceId: string; orderId: string }[];
+  selectBulk: (params: SelectBulkParams) => void;
 }) => {
   const router = useRouter();
   const editInvoiceMutation = useMutation({
@@ -668,6 +703,18 @@ export const OrderUI = ({
             border border-transparent hover:border-gray-400"
                       >
                         <div className="flex flex-1 items-center gap-2 font-medium">
+                          <Checkbox
+                            className="size-5 border-black"
+                            checked={bulkStatus.some(
+                              (item) => item.orderId === String(or.id),
+                            )}
+                            onCheckedChange={() =>
+                              selectBulk({
+                                invoiceId: String(or.invoiceId),
+                                orderId: or.id as string,
+                              })
+                            }
+                          />
                           <div
                             className={`${
                               or.deliveryfee ? "bg-superbase" : "bg-input"
