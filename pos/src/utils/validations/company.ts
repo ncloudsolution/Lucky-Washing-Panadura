@@ -115,3 +115,12 @@ export const StatusSchema = z.object({
     error: () => ({ message: "Status is required" }),
   }),
 });
+
+export const BulkStatusSchema = z.object({
+  ids: z
+    .array(z.string().nonempty({ message: "orderId is required" }))
+    .min(1, { message: "orderId is required" }),
+  status: z.enum(ENUMOrderStatusArray, {
+    error: () => ({ message: "Status is required" }),
+  }),
+});
