@@ -35,6 +35,7 @@ import { format } from "date-fns";
 import { set } from "lodash";
 import {
   BadgeCheck,
+  Boxes,
   Building2,
   Check,
   CheckCheck,
@@ -57,6 +58,13 @@ import { DateRange } from "react-day-picker";
 import { toast } from "sonner";
 import * as XLSX from "xlsx-js-style";
 import { List } from "react-window";
+import { Checkbox } from "@/components/ui/checkbox";
+import FormBulkChange from "@/components/custom/forms/FormBulkChange";
+
+export type SelectBulkParams = {
+  invoiceId: string;
+  orderId: string;
+};
 
 export function getTodayRange(date: Date) {
   const from = new Date(date);
@@ -87,6 +95,26 @@ const AllOrders = () => {
   // const counterNo = session?.user?.counter ? `${session.user.counter}-` : "01-";
   const [query, setQuery] = useState("01-");
   const [open, setOpen] = useState(false);
+
+  const [bulkStatus, setBulkStatus] = useState<
+    { invoiceId: string; orderId: string }[]
+  >([]);
+
+  const [bulkActive, setBulkActive] = useState(false);
+
+  React.useEffect(() => {
+    if (!bulkActive) {
+      setBulkStatus([]);
+    }
+  }, [bulkActive]);
+
+  const selectBulk = ({ invoiceId, orderId }: SelectBulkParams) => {
+    setBulkStatus((prev) =>
+      prev.some((item) => item.orderId === orderId)
+        ? prev.filter((item) => item.orderId !== orderId)
+        : [...prev, { invoiceId, orderId }],
+    );
+  };
 
   React.useEffect(() => {
     const loadCounter = async () => {
@@ -517,6 +545,44 @@ const AllOrders = () => {
               }
             />
           </TipWrapper>
+          <Button
+            onClick={() => setBulkActive(!bulkActive)}
+            disabled={isLoading || isLoadingDebounce}
+            className={`relative ${
+              bulkActive
+                ? "bg-black text-white"
+                : "bg-white border border-input text-black"
+            }
+          disabled:bg-gray-500 disabled:text-white  hover:bg-black/50 hover:text-white duration-500 transition-all`}
+          >
+            <span
+              className={`absolute flex items-center justify-center size-6 rounded-full ${
+                isLoading || isLoadingDebounce
+                  ? "bg-gray-500 text-white"
+                  : bulkActive
+                    ? "bg-black text-white border-white"
+                    : "bg-white border text-black border-input"
+              }  border-2 -right-2 -top-2 text-[10px] duration-500 transition-all `}
+            >
+              {bulkStatus.length}
+            </span>
+            <Boxes />
+          </Button>
+          {bulkStatus.length > 0 && (
+            <AddNewDialog
+              width="min-w-xl"
+              form={
+                <FormBulkChange
+                  data={bulkStatus}
+                  selectBulk={selectBulk}
+                  dates={dates}
+                  setBulkActive={setBulkActive}
+                />
+              }
+              triggerBtn={<Button>Next</Button>}
+              triggerText="Confirm Bulk"
+            />
+          )}
         </div>
         {filteredOrders && !isLoading && !isLoadingDebounce ? (
           <div className="flex flex-col justify-center items-center text-superbase">
@@ -543,6 +609,9 @@ const AllOrders = () => {
         role={role}
         isLoading={isLoading || isLoadingDebounce}
         orderMetas={filteredOrders ?? []}
+        bulkActive={bulkActive}
+        bulkStatus={bulkStatus}
+        selectBulk={selectBulk}
       />
     </div>
   );
@@ -573,11 +642,17 @@ export const OrderUI = ({
   orderMetas,
   role,
   dates,
+  bulkActive,
+  bulkStatus,
+  selectBulk,
 }: {
   dates: DateRange | undefined;
   role: T_Role;
   isLoading: boolean;
   orderMetas: IOrderMeta[];
+  bulkActive: boolean;
+  bulkStatus: { invoiceId: string; orderId: string }[];
+  selectBulk: (params: SelectBulkParams) => void;
 }) => {
   const router = useRouter();
   const editInvoiceMutation = useMutation({
@@ -616,6 +691,7 @@ export const OrderUI = ({
     }, 100);
   };
 
+  console.log(bulkStatus);
   return (
     <>
       <HeaderLabel />
@@ -668,6 +744,21 @@ export const OrderUI = ({
             border border-transparent hover:border-gray-400"
                       >
                         <div className="flex flex-1 items-center gap-2 font-medium">
+                          {bulkActive && (
+                            <Checkbox
+                              disabled={dueAmount !== 0}
+                              className={`size-5 ${dueAmount === 0 ? "border-black" : "border-destructive bg-destructive/30"}  `}
+                              checked={bulkStatus.some(
+                                (item) => item.orderId === String(or.id),
+                              )}
+                              onCheckedChange={() =>
+                                selectBulk({
+                                  invoiceId: String(or.invoiceId),
+                                  orderId: or.id as string,
+                                })
+                              }
+                            />
+                          )}
                           <div
                             className={`${
                               or.deliveryfee ? "bg-superbase" : "bg-input"
