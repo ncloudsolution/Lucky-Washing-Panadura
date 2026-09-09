@@ -106,7 +106,7 @@ const FormBulkChange = ({
             <FormLabel className="font-semibold text-[12px] xxs:text-[14px] flex items-center">
               Invoices
             </FormLabel>
-            <div className="flex w-full gap-3">
+            <div className="flex flex-wrap w-full gap-3">
               {data.map((i, index) => {
                 const invoiceId = i.invoiceId.toString();
                 const counterId = invoiceId.slice(0, 2);
