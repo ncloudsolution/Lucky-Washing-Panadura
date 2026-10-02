@@ -11,6 +11,7 @@ export const ROLE_PERMISSIONS = {
     "create:order",
     "edit:order",
     "view:orders",
+    "delete:orders",
     "view:stock",
     "create:product",
     "edit:product",

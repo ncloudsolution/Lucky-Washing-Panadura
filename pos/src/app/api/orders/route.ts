@@ -1109,3 +1109,98 @@ export const GET = auth(async function GET(req: any) {
     }
   }
 });
+
+export const DELETE = auth(async function DELETE(req) {
+  const { id } = await req.json();
+
+  try {
+    //authentication
+
+    // authentication & permission check
+    if (!req.auth) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "You are not authenticated",
+          error: "UNAUTHORIZED",
+        },
+        { status: 401 },
+      );
+    }
+
+    const authRole = req.auth?.user?.role?.toLowerCase() as T_Role;
+
+    if (
+      !hasPermission({
+        userRole: authRole,
+        permission: "delete:orders",
+        // resourceBranch,
+        // userBranch: authBranch,
+      })
+    ) {
+      return NextResponse.json(
+        { success: false, message: "Not authorized" },
+        { status: 403 },
+      );
+    }
+
+    const verification = await prisma.orderMeta.findFirst({
+      where: {
+        id: id,
+      },
+      select: {
+        createdAt: true,
+      },
+    });
+
+    if (!verification) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Order not found.",
+          description:
+            "The requested order could not be found. Delete operation cannot be completed because the resource does not exist.",
+          error: "NOT FOUND",
+        },
+        { status: 404 },
+      );
+    }
+
+    const timeDifference = Math.abs(
+      new Date().getTime() - new Date(verification.createdAt).getTime(),
+    );
+
+    if (timeDifference > 31 * 24 * 60 * 60 * 1000) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Order cannot be deleted.",
+
+          description:
+            "•  Orders can only be deleted within 31 days of creation. \n • This record is locked and cannot be deleted.",
+          error: "LOCKED",
+        },
+        { status: 400 },
+      );
+    }
+
+    await prisma.orderMeta.delete({
+      where: { id: id },
+    });
+    return NextResponse.json(
+      {
+        success: true,
+        message: "Order deleted successfully",
+        description:
+          "The Order and all associated data have been permanently removed from the system.",
+        data: id,
+      },
+      { status: 200 },
+    );
+  } catch (err) {
+    return NextResponse.json(
+      { success: false, message: "Internal Server Error" },
+      { status: 500 },
+    );
+  }
+});
