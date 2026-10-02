@@ -916,7 +916,10 @@ export const OrderUI = ({
                             }
                           />
 
-                          <OrderSheet id={or.id!} />
+                          <OrderSheet
+                            id={or.id!}
+                            invoiceNo={`${counterId}-${invoiceIdOnly}`}
+                          />
                         </div>
                       </div>
                     </div>

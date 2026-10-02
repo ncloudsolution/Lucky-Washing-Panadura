@@ -27,13 +27,21 @@ import { DeleteDialog } from "../dialogs/DeleteDialog";
 import { toast } from "sonner";
 import { BasicHoverCard } from "../cards/BasicHoverCard";
 import ModInvoice from "../cards/ModInvoice";
+import { getTodayRange } from "@/app/(screens)/core/(orders)/orders-all/page";
 
-export function OrderSheet({ id }: { id: string }) {
+export function OrderSheet({
+  id,
+  invoiceNo,
+}: {
+  id: string;
+  invoiceNo: string;
+}) {
   const [open, setOpen] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
 
   const { data: session, status } = useSession();
   const role = session?.user.role.toLowerCase();
+  const branch = session?.user.branch;
 
   const handlePrint = useReactToPrint({
     contentRef,
@@ -96,8 +104,47 @@ export function OrderSheet({ id }: { id: string }) {
           <SheetTitle className="hidden">Order Summary</SheetTitle>
           {!isLoading && !isLoadingPaymentBreakdown ? (
             <>
-              <SheetTitle className="text-[18px] flex flex-col">
-                Order Summary
+              <SheetTitle className="text-[18px] flex gap-3">
+                <span>Order Summary</span>
+                <ViewAccessChecker
+                  permission="delete:orders"
+                  userBranch={branch}
+                  userRole={role}
+                  component={
+                    <DeleteDialog
+                      mini
+                      triggerText="Delete Order"
+                      data={`Affected Order - ${invoiceNo}`}
+                      onClick={async () => {
+                        try {
+                          const res = await BasicDataFetch({
+                            method: "DELETE",
+                            endpoint: "/api/orders",
+                            data: { id: id },
+                          });
+
+                          queryClient.setQueriesData(
+                            { queryKey: ["all-orders"] },
+                            (oldData: any[] = []) => {
+                              return oldData.filter((od) => od.id !== res.data);
+                            },
+                          );
+
+                          toast.success(res.message);
+                        } catch (err) {
+                          const errorMessage =
+                            err instanceof Error
+                              ? err.message
+                              : "An error occurred";
+                          toast.error(errorMessage);
+                        }
+                      }}
+                    />
+                  }
+                  skeleton={
+                    <Skeleton className="size-[25px] rounded-sm bg-gray-300 border-slate-400" />
+                  }
+                />
               </SheetTitle>
               <SheetDescription>
                 View full order details and payment summary.

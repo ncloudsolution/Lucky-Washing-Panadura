@@ -424,8 +424,8 @@ const Category = () => {
             {isLoadingSms || isPending
               ? "Loading..."
               : sms
-              ? "Enabled"
-              : "Disabled"}
+                ? "Enabled"
+                : "Disabled"}
           </span>
         </div>
 
