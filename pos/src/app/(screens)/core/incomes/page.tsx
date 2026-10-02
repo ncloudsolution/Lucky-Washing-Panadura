@@ -551,7 +551,10 @@ const Income = () => {
                       <span className="font-medium">{date}</span>
                       <span>{time}</span>
                     </div>
-                    <OrderSheet id={ex.orderId!} />
+                    <OrderSheet
+                      id={ex.orderId!}
+                      invoiceNo={`${counterId}-${invoiceIdOnly}`}
+                    />
                   </div>
                 );
               })}
