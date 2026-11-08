@@ -1170,14 +1170,14 @@ export const DELETE = auth(async function DELETE(req) {
       new Date().getTime() - new Date(verification.createdAt).getTime(),
     );
 
-    if (timeDifference > 31 * 24 * 60 * 60 * 1000) {
+    if (timeDifference > 6 * 31 * 24 * 60 * 60 * 1000) {
       return NextResponse.json(
         {
           success: false,
           message: "Order cannot be deleted.",
 
           description:
-            "•  Orders can only be deleted within 31 days of creation. \n • This record is locked and cannot be deleted.",
+            "•  Orders can only be deleted within 6 months of creation. \n • This record is locked and cannot be deleted.",
           error: "LOCKED",
         },
         { status: 400 },
